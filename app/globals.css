@@ -1,0 +1,300 @@
+@import "tailwindcss";
+.preview {
+  background: #e7eee2;
+  border: 1px solid #c9d5c6;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+:root {
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #f6f7f2;
+  color: #213d38;
+  font-family: Arial, Helvetica, sans-serif;
+}
+button,
+input,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a,
+input {
+  outline-offset: 5px;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.shell {
+  max-width: 880px;
+  margin: auto;
+  padding: 30px 24px;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.brand small {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 2px;
+  margin-top: 6px;
+  color: #697b75;
+}
+.paw {
+  background: #dce9db;
+  padding: 12px;
+  border-radius: 16px;
+  font-size: 24px;
+}
+.demo {
+  font-size: 11px;
+  border: 1px solid #ccd7c9;
+  border-radius: 30px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+.hero {
+  text-align: center;
+  padding: 65px 0 35px;
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #607769;
+}
+h1 {
+  font-size: clamp(32px, 6vw, 52px);
+  line-height: 1.14;
+  letter-spacing: -1.8px;
+  margin: 20px 0;
+}
+p {
+  line-height: 1.65;
+}
+.hero p {
+  color: #61756c;
+  font-size: 14px;
+}
+.mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  background: #2b6553;
+  color: white;
+  border: 9px solid #e1eadf;
+  border-radius: 50%;
+  margin-top: 20px;
+  box-shadow: 0 0 0 10px #eef0e8;
+}
+.listening {
+  animation: pulse 1.5s infinite;
+}
+.status {
+  font-weight: 700;
+}
+.question-input {
+  max-width: 480px;
+  display: flex;
+  margin: 24px auto 0;
+  background: white;
+  border: 1px solid #d8dfd3;
+  border-radius: 14px;
+  padding: 6px;
+}
+.question-input input {
+  border: 0;
+  background: transparent;
+  min-width: 0;
+  flex: 1;
+  padding: 12px;
+  font-size: 13px;
+}
+.question-input button {
+  border: 0;
+  background: #e7eee2;
+  border-radius: 10px;
+  width: 43px;
+  font-size: 22px;
+}
+.examples h2 {
+  font-size: 12px;
+  color: #65796e;
+  font-weight: 400;
+}
+.examples > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.examples button {
+  text-align: left;
+  background: white;
+  border: 1px solid #e0e5da;
+  padding: 17px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.conversation {
+  background: white;
+  padding: 25px;
+  margin-top: 25px;
+  border-radius: 18px;
+  border: 1px solid #dce4d8;
+}
+.conversation small {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #64796b;
+}
+.answer {
+  white-space: pre-line;
+}
+.audio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.audio button {
+  background: #edf2e8;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px;
+  color: #36594a;
+  font-size: 12px;
+}
+.contact {
+  border-top: 1px solid #e0e7dc;
+  margin-top: 24px;
+  padding-top: 15px;
+}
+.contact h2 {
+  font-size: 20px;
+}
+.contact > label {
+  display: block;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.contact input:not([type="checkbox"]) {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #c9d5c6;
+  border-radius: 9px;
+  margin-top: 6px;
+}
+.contact .consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.primary {
+  display: block;
+  text-align: center;
+  background: #2b6553;
+  color: white;
+  border: 0;
+  border-radius: 10px;
+  padding: 15px;
+  width: 100%;
+  font-size: 14px;
+  margin-top: 15px;
+}
+.success {
+  padding: 20px 0;
+  color: #2b6553;
+}
+.success small {
+  display: block;
+  margin-top: 12px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.error {
+  background: #fff0e8;
+  color: #8a3526;
+  padding: 16px;
+  border-radius: 10px;
+}
+footer {
+  text-align: center;
+  margin-top: 45px;
+  color: #718175;
+  font-size: 11px;
+}
+footer span {
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+.honeypot,
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 20px #dce8d7;
+  }
+}
+@media (max-width: 450px) {
+  .shell {
+    padding: 20px 16px;
+  }
+  .brand {
+    font-size: 12px;
+  }
+  .demo {
+    font-size: 9px;
+    padding: 7px;
+  }
+  .hero {
+    padding-top: 45px;
+  }
+  .examples > div {
+    grid-template-columns: 1fr;
+  }
+  .conversation {
+    padding: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .listening {
+    animation: none;
+  }
+}

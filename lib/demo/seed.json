@@ -1,0 +1,447 @@
+{
+  "clinic": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "slug": "mavi-pati",
+    "name": "Mavi Pati Veteriner Kliniği",
+    "description": "Tamamen temsili demo klinik. Fiyatlar ve hizmet bilgileri satış demosu içindir.",
+    "whatsapp": "905456597551",
+    "address": "Demo adres — gerçek işletme değildir",
+    "phone": null
+  },
+  "knowledge": [
+    {
+      "id": "f356c2a2-75b4-4238-84c2-02db2d8f8d4a",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kedi Aşıları",
+      "canonical_question": "Kedi karma aşısı ne kadar?",
+      "answer_text": "Kedi karma aşısı için temsili demo ücretimiz 1.200 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["kedi", "karma", "aşısı", "fiyat"],
+      "alternative_questions": [
+        "Kedi karma aşı fiyatı nedir?",
+        "Kedi karma aşısı kaç TL?",
+        "Kedimin karma aşısını yaptırmak istiyorum."
+      ],
+      "priority": 0
+    },
+    {
+      "id": "0be33cd1-e8bb-4642-8266-c2e4e5bb9459",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kedi Aşıları",
+      "canonical_question": "Kedi kuduz aşısı ne kadar?",
+      "answer_text": "Kedi kuduz aşısı için temsili demo ücretimiz 900 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["kedi", "kuduz", "aşısı", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "710969ca-19dc-4169-90eb-8a5004dd19ec",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kedi Aşıları",
+      "canonical_question": "Kedi lösemi aşısı ne kadar?",
+      "answer_text": "Kedi lösemi aşısı için temsili demo ücretimiz 1.400 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["kedi", "lösemi", "aşısı", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "130d9f8d-2f6b-47ae-91dd-b8176a29c4e8",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kedi Aşıları",
+      "canonical_question": "Yavru kediler için aşı planı hazırlıyor musunuz?",
+      "answer_text": "Demo kliniğimizde yavru kediler için muayene sonrası veteriner hekimin belirlediği aşı planı hazırlanır.",
+      "keywords": [
+        "yavru",
+        "kediler",
+        "için",
+        "aşı",
+        "planı",
+        "hazırlıyor",
+        "musunuz?"
+      ],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "fdb96620-0287-46ca-ac4b-27d5420fb1f6",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Köpek Aşıları",
+      "canonical_question": "Köpek karma aşısı ne kadar?",
+      "answer_text": "Köpek karma aşısı için temsili demo ücretimiz 1.300 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["köpek", "karma", "aşısı", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "cc122eb8-ed63-4f2a-9de5-737d6c23a8df",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Köpek Aşıları",
+      "canonical_question": "Köpek kuduz aşısı ne kadar?",
+      "answer_text": "Köpek kuduz aşısı için temsili demo ücretimiz 900 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["köpek", "kuduz", "aşısı", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "82c33afd-4e05-4eb8-af38-dc2fceee499d",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Köpek Aşıları",
+      "canonical_question": "Köpek bronşin aşısı ne kadar?",
+      "answer_text": "Köpek bronşin aşısı için temsili demo ücretimiz 1.100 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["köpek", "bronşin", "aşısı", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "38e5a2e1-a373-44de-bf24-a8885dcce7da",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Köpek Aşıları",
+      "canonical_question": "Yavru köpekler için aşı planı hazırlıyor musunuz?",
+      "answer_text": "Demo kliniğimizde yavru köpeklerin aşı planı muayenede veteriner hekim tarafından belirlenir.",
+      "keywords": [
+        "yavru",
+        "köpekler",
+        "için",
+        "aşı",
+        "planı",
+        "hazırlıyor",
+        "musunuz?"
+      ],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "6a925922-3295-4708-8d10-a0ee690d717e",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kısırlaştırma",
+      "canonical_question": "Kedi kısırlaştırma ücreti nedir?",
+      "answer_text": "Kedi kısırlaştırma için temsili demo başlangıç ücreti 4.500 TL’dir. Muayene ve işlem kapsamına göre değişir; gerçek fiyat değildir.",
+      "keywords": ["kedi", "kısırlaştırma", "ücreti", "nedir?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "695b9195-e169-47dd-b279-7df0b69bba04",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kısırlaştırma",
+      "canonical_question": "Köpek kısırlaştırma ücreti nedir?",
+      "answer_text": "Köpek kısırlaştırma için temsili demo başlangıç ücreti 6.000 TL’dir. Muayene ve işlem kapsamına göre değişir; gerçek fiyat değildir.",
+      "keywords": ["köpek", "kısırlaştırma", "ücreti", "nedir?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "a086058c-6015-4fe7-9239-a8399a9c72cd",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kısırlaştırma",
+      "canonical_question": "Kısırlaştırma için randevu gerekli mi?",
+      "answer_text": "Demo kliniğimizde kısırlaştırma ön muayenesi ve operasyonu için randevu gereklidir.",
+      "keywords": ["kısırlaştırma", "için", "randevu", "gerekli", "mi?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "3f1f0888-61b5-45c3-b955-fb21c0965598",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Kısırlaştırma",
+      "canonical_question": "Kısırlaştırma sonrası kontrol yapıyor musunuz?",
+      "answer_text": "Demo kliniğimizde operasyon sonrası kontrol randevusu planlanır. Kişisel bakım talimatlarını veteriner hekiminiz verir.",
+      "keywords": [
+        "kısırlaştırma",
+        "sonrası",
+        "kontrol",
+        "yapıyor",
+        "musunuz?"
+      ],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "065ff8af-b49f-46cc-b986-4fb606665660",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Muayene",
+      "canonical_question": "Muayene ücreti nedir?",
+      "answer_text": "Genel muayene için temsili demo ücretimiz 850 TL’dir. Tetkikler ayrıca değerlendirilir. Gerçek fiyat değildir.",
+      "keywords": ["muayene", "ücreti", "nedir?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "ce68c690-3832-4e8d-9ebf-8133e1dd3911",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Muayene",
+      "canonical_question": "Muayeneye gelirken ne getirmeliyim?",
+      "answer_text": "Demo kliniğimize gelirken varsa aşı karnesi, önceki tetkikler ve kullanılan ilaçların listesini getirebilirsiniz.",
+      "keywords": ["muayeneye", "gelirken", "ne", "getirmeliyim?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "66965e04-bf20-4b15-96b4-bc3d34fca34e",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Muayene",
+      "canonical_question": "Kontrol muayenesi yapıyor musunuz?",
+      "answer_text": "Demo kliniğimizde kontrol muayenesi yapılır. Zamanı ve kapsamı veteriner hekiminizle planlanır.",
+      "keywords": ["kontrol", "muayenesi", "yapıyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "73f46ede-3984-409a-89cb-5ff655427753",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Muayene",
+      "canonical_question": "Evde muayene hizmetiniz var mı?",
+      "answer_text": "Demo kliniğimizde evde muayene hizmeti bulunmamaktadır.",
+      "keywords": ["evde", "muayene", "hizmetiniz", "var", "mı?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "b43d0551-e7a4-4d31-8ccf-dcfa2fcc6080",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Parazit Uygulamaları",
+      "canonical_question": "Kedi iç parazit uygulaması ne kadar?",
+      "answer_text": "Kedi iç parazit uygulaması için temsili demo başlangıç ücreti 400 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["kedi", "iç", "parazit", "uygulaması", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "b906ad83-d884-46d7-a7ca-2d9a0cdb2c23",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Parazit Uygulamaları",
+      "canonical_question": "Köpek iç parazit uygulaması ne kadar?",
+      "answer_text": "Köpek iç parazit uygulaması için temsili demo başlangıç ücreti 450 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["köpek", "iç", "parazit", "uygulaması", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "e54b76d5-1536-4170-b6e2-6168987121f6",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Parazit Uygulamaları",
+      "canonical_question": "Kedi dış parazit uygulaması ne kadar?",
+      "answer_text": "Kedi dış parazit uygulaması için temsili demo başlangıç ücreti 500 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["kedi", "dış", "parazit", "uygulaması", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "8280298f-84b4-4bdf-a0d9-aa64e1bd7a41",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Parazit Uygulamaları",
+      "canonical_question": "Köpek dış parazit uygulaması ne kadar?",
+      "answer_text": "Köpek dış parazit uygulaması için temsili demo başlangıç ücreti 600 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["köpek", "dış", "parazit", "uygulaması", "ne", "kadar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "72d0a214-b638-495f-91e3-127063e5cd21",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Mikroçip",
+      "canonical_question": "Mikroçip uygulaması yapıyor musunuz?",
+      "answer_text": "Evet, demo kliniğimizde mikroçip uygulaması hizmeti bulunmaktadır.",
+      "keywords": ["mikroçip", "uygulaması", "yapıyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "c9e3c21f-6407-451b-b041-418e52af3ee5",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Mikroçip",
+      "canonical_question": "Mikroçip ücreti nedir?",
+      "answer_text": "Mikroçip uygulaması için temsili demo ücretimiz 750 TL’dir. Gerçek fiyat değildir.",
+      "keywords": ["mikroçip", "ücreti", "nedir?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "f3f397d9-f378-4402-b599-301270bdc530",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Mikroçip",
+      "canonical_question": "Mikroçip kontrolü yapıyor musunuz?",
+      "answer_text": "Demo kliniğimizde mikroçip okuyucusu ile çip kontrolü yapılır.",
+      "keywords": ["mikroçip", "kontrolü", "yapıyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "d44ac33c-4e93-4279-93ef-554280b95aec",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Pasaport",
+      "canonical_question": "Evcil hayvan pasaportu düzenliyor musunuz?",
+      "answer_text": "Demo kliniğimizde evcil hayvan pasaportu işlemleri hakkında destek sunulur. Gerekli belgeler için klinikle görüşün.",
+      "keywords": ["evcil", "hayvan", "pasaportu", "düzenliyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "231208ba-65e4-48a3-8f1a-919c1d4375ac",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Pasaport",
+      "canonical_question": "Yurt dışı seyahati için destek veriyor musunuz?",
+      "answer_text": "Demo kliniğimiz seyahat belgeleri hakkında görüşme sunar. Ülkeye özgü güncel şartlar ilgili resmi makamlarla doğrulanmalıdır.",
+      "keywords": [
+        "yurt",
+        "dışı",
+        "seyahati",
+        "için",
+        "destek",
+        "veriyor",
+        "musunuz?"
+      ],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "87a7a47a-3a61-45a6-9145-4ef427e64adf",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Pasaport",
+      "canonical_question": "Aşı karnemi getirmem gerekiyor mu?",
+      "answer_text": "Varsa mevcut aşı karnesini ve kimlik belgelerini demo kliniğimize getirmeniz önerilir.",
+      "keywords": ["aşı", "karnemi", "getirmem", "gerekiyor", "mu?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "93bb16c2-4139-4dc8-99f7-013d0a9da7ae",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Çalışma Saatleri",
+      "canonical_question": "Bugün kaça kadar açıksınız?",
+      "answer_text": "Temsili demo çalışma saatlerimiz pazartesi–cumartesi 09.00–19.00’dur. Pazar kapalıyız. Tatil günleri için klinikle görüşün.",
+      "keywords": ["bugün", "kaça", "kadar", "açıksınız?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "84dbde80-2f8f-4156-bfa8-a357fafb470a",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Çalışma Saatleri",
+      "canonical_question": "Pazar günü açık mısınız?",
+      "answer_text": "Demo kliniğimiz pazar günleri kapalıdır.",
+      "keywords": ["pazar", "günü", "açık", "mısınız?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "552f0a33-4f48-43f2-b047-a3c0c0e3f6c4",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Çalışma Saatleri",
+      "canonical_question": "Sabah kaçta açılıyorsunuz?",
+      "answer_text": "Demo kliniğimiz pazartesi–cumartesi sabah 09.00’da açılır.",
+      "keywords": ["sabah", "kaçta", "açılıyorsunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "96f60d96-d12f-44ab-9628-3d6f2ac3c534",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Acil Hizmet",
+      "canonical_question": "Acil hizmetiniz var mı?",
+      "answer_text": "Demo kliniğimizde 24 saat acil hizmet yoktur. Acil durumda açık bir veteriner kliniğiyle hemen iletişime geçin.",
+      "keywords": ["acil", "hizmetiniz", "var", "mı?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "492df1dc-fe30-445b-8199-53e0024fca0d",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Acil Hizmet",
+      "canonical_question": "Gece açık mısınız?",
+      "answer_text": "Demo kliniğimiz gece açık değildir; temsili kapanış saatimiz 19.00’dur.",
+      "keywords": ["gece", "açık", "mısınız?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "b88fa772-dd23-4423-9e65-b0cf2e443ebb",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Randevu",
+      "canonical_question": "Randevu almam gerekiyor mu?",
+      "answer_text": "Demo kliniğimizde beklemeyi azaltmak için randevu önerilir. Operasyonlar için randevu gereklidir.",
+      "keywords": ["randevu", "almam", "gerekiyor", "mu?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "ac394789-f990-43b6-9884-298fe791d3f1",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Randevu",
+      "canonical_question": "Nasıl randevu alabilirim?",
+      "answer_text": "Demo kliniğimizle WhatsApp üzerinden iletişime geçerek randevu talebinizi paylaşabilirsiniz. Bu asistan randevu oluşturmaz.",
+      "keywords": ["nasıl", "randevu", "alabilirim?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "f59b3133-b529-49cb-9bb4-9d852acc8e8d",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Randevu",
+      "canonical_question": "Randevumu nasıl iptal ederim?",
+      "answer_text": "Randevu değişikliği veya iptali için demo kliniğimizle doğrudan iletişime geçin.",
+      "keywords": ["randevumu", "nasıl", "iptal", "ederim?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "437b89fb-1318-4238-888f-b4330fc325bb",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Laboratuvar",
+      "canonical_question": "Kan tahlili yapıyor musunuz?",
+      "answer_text": "Demo kliniğimizde veteriner hekimin uygun gördüğü kan tahlilleri yapılır.",
+      "keywords": ["kan", "tahlili", "yapıyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "141b3c1e-ff31-4b4c-acb6-31d8c52eb6ab",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Laboratuvar",
+      "canonical_question": "Tahlil sonuçları ne zaman çıkar?",
+      "answer_text": "Demo kliniğimizde sonuç süresi tetkike göre değişir. Kesin süre için klinikle görüşün.",
+      "keywords": ["tahlil", "sonuçları", "ne", "zaman", "çıkar?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "1b6c688c-d37d-4682-b7db-25a90194d173",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Laboratuvar",
+      "canonical_question": "İdrar tahlili yapıyor musunuz?",
+      "answer_text": "Demo kliniğimizde idrar tahlili hizmeti sunulur; örnek toplama talimatı için klinikle görüşün.",
+      "keywords": ["idrar", "tahlili", "yapıyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "068ed0a7-9272-4f7f-b936-7eefc353fc88",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Genel Hizmetler",
+      "canonical_question": "Kedi ve köpek muayene ediyor musunuz?",
+      "answer_text": "Demo kliniğimizde kedi ve köpek muayenesi hizmeti sunulur.",
+      "keywords": ["kedi", "ve", "köpek", "muayene", "ediyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "48a6ae0e-541e-490c-8770-d5c36ab2d135",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Genel Hizmetler",
+      "canonical_question": "Tırnak kesimi yapıyor musunuz?",
+      "answer_text": "Demo kliniğimizde kedi ve köpekler için tırnak kesimi hizmeti sunulur.",
+      "keywords": ["tırnak", "kesimi", "yapıyor", "musunuz?"],
+      "alternative_questions": [],
+      "priority": 0
+    },
+    {
+      "id": "57a04db4-a694-4288-85fe-40120db094f2",
+      "clinic_id": "00000000-0000-4000-8000-000000000001",
+      "category": "Genel Hizmetler",
+      "canonical_question": "Hayvan pansiyonu hizmetiniz var mı?",
+      "answer_text": "Demo kliniğimizde hayvan pansiyonu hizmeti bulunmamaktadır.",
+      "keywords": ["hayvan", "pansiyonu", "hizmetiniz", "var", "mı?"],
+      "alternative_questions": [],
+      "priority": 0
+    }
+  ]
+}
