@@ -5,49 +5,104 @@ import {
   BrowserSpeechRecognitionProvider,
   BrowserTextToSpeechProvider,
 } from "@/lib/speech";
-const examples = [
-  "Kedi karma aşısı ne kadar?",
-  "Kedi kısırlaştırma ücreti nedir?",
-  "Bugün kaça kadar açıksınız?",
-  "Mikroçip uygulaması yapıyor musunuz?",
-  "Randevu almam gerekiyor mu?",
-  "Acil hizmetiniz var mı?",
-];
+import {
+  DEFAULT_LANGUAGE,
+  getLocale,
+  getClinicLanguages,
+  type LanguageCode,
+} from "@/locales";
+type AssistantState =
+  "ready" | "listening" | "processing" | "answered" | "speaking";
 export function Assistant({
   clinic,
   preview = false,
+  initialLanguage = DEFAULT_LANGUAGE,
 }: {
   clinic: Clinic;
   preview?: boolean;
+  initialLanguage?: LanguageCode;
 }) {
+  const [language, setLanguage] = useState<LanguageCode>(initialLanguage);
+  const locale = getLocale(language),
+    t = locale.messages;
+  const clinicLanguages = getClinicLanguages(clinic);
+  const clinicName = clinic.name_translations?.[language] ?? clinic.name;
   const [text, setText] = useState(""),
     [question, setQuestion] = useState(""),
     [answer, setAnswer] = useState(""),
     [unanswered, setUnanswered] = useState(false),
-    [state, setState] = useState("Hazır"),
+    [state, setState] = useState<AssistantState>("ready"),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false),
     [saved, setSaved] = useState(false),
     [url, setUrl] = useState<string | null>(null);
   const stt = useRef<BrowserSpeechRecognitionProvider | null>(null),
     tts = useRef<BrowserTextToSpeechProvider | null>(null),
-    busy = useRef(false);
+    busy = useRef(false),
+    savingRef = useRef(false),
+    session = useRef(0),
+    requestController = useRef<AbortController | null>(null);
   useEffect(() => {
-    stt.current = new BrowserSpeechRecognitionProvider();
-    tts.current = new BrowserTextToSpeechProvider();
+    const sessionRef = session,
+      controllerRef = requestController;
+    const recognition = new BrowserSpeechRecognitionProvider(),
+      synthesis = new BrowserTextToSpeechProvider();
+    stt.current = recognition;
+    tts.current = synthesis;
     return () => {
-      stt.current?.stop();
-      tts.current?.stop();
+      sessionRef.current++;
+      controllerRef.current?.abort();
+      recognition.stop();
+      synthesis.stop();
     };
   }, []);
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = locale.direction;
+    document.title = `${clinicName} · ${t.assistantTitle}`;
+  }, [language, locale.direction, clinicName, t.assistantTitle]);
+  function changeLanguage(next: LanguageCode) {
+    if (next === language || savingRef.current) return;
+    session.current++;
+    requestController.current?.abort();
+    stt.current?.stop();
+    tts.current?.stop();
+    busy.current = false;
+    setLanguage(next);
+    setText("");
+    setQuestion("");
+    setAnswer("");
+    setUnanswered(false);
+    setState("ready");
+    setError("");
+    setSaved(false);
+    setUrl(null);
+    const location = new URL(window.location.href);
+    location.searchParams.set("lang", next);
+    window.history.replaceState(null, "", location);
+  }
   function speak(value: string) {
-    setState("Konuşuyor...");
-    if (!tts.current?.speak(value, () => setState("Cevap hazır")))
-      setState("Cevap hazır");
+    const version = session.current;
+    setState("speaking");
+    if (
+      !tts.current?.speak(
+        value,
+        () => {
+          if (version === session.current) setState("answered");
+        },
+        language,
+      )
+    ) {
+      setState("answered");
+      setError(t.errors.ttsUnavailable);
+    }
   }
   async function ask(value: string) {
-    if (busy.current || saving) return;
+    if (busy.current || savingRef.current) return;
     busy.current = true;
+    const version = session.current;
+    const controller = new AbortController();
+    requestController.current = controller;
     tts.current?.stop();
     stt.current?.stop();
     setError("");
@@ -56,73 +111,93 @@ export function Assistant({
     setSaved(false);
     setUrl(null);
     setUnanswered(false);
-    setState("Sorunuz anlaşılıyor...");
+    setState("processing");
     try {
-      const res = await fetch(
+      const response = await fetch(
         `/api/${encodeURIComponent(clinic.slug)}/question`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: value }),
+          headers: {
+            "Content-Type": "application/json",
+            "X-Assistant-Language": language,
+          },
+          body: JSON.stringify({ question: value, language_code: language }),
+          signal: controller.signal,
         },
       );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error);
-        setState("Hazır");
+      const data = await response.json();
+      if (version !== session.current) return;
+      if (!response.ok) {
+        setError(data.error ?? t.errors.unavailable);
+        setState("ready");
         return;
       }
       setAnswer(data.answer);
       setUnanswered(!data.answered);
       speak(data.answer);
     } catch {
-      setError("İnternet bağlantınızı kontrol edip tekrar deneyin.");
-      setState("Hazır");
+      if (version === session.current && !controller.signal.aborted) {
+        setError(t.errors.network);
+        setState("ready");
+      }
     } finally {
-      busy.current = false;
+      if (version === session.current) {
+        busy.current = false;
+        requestController.current = null;
+      }
     }
   }
   function listen() {
-    if (busy.current || saving) return;
+    if (busy.current || savingRef.current) return;
     setError("");
     tts.current?.stop();
-    if (state === "Dinliyor...") {
+    if (state === "listening") {
       stt.current?.stop();
-      setState("Hazır");
+      setState("ready");
       return;
     }
-    setState("Dinliyor...");
-    try {
-      stt.current?.start(
-        (value) => {
+    const version = session.current;
+    setState("listening");
+    stt.current?.start(
+      (value) => {
+        if (version === session.current) {
           setText(value);
           void ask(value);
-        },
-        (message) => {
+        }
+      },
+      (message) => {
+        if (version === session.current) {
           setError(message);
-          setState("Hazır");
-        },
-        () => setState((s) => (s === "Dinliyor..." ? "Hazır" : s)),
-      );
-    } catch {
-      setError("Mikrofon başlatılamadı. Sorunuzu yazabilirsiniz.");
-      setState("Hazır");
-    }
+          setState("ready");
+        }
+      },
+      () => {
+        if (version === session.current)
+          setState((current) => (current === "listening" ? "ready" : current));
+      },
+      language,
+    );
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (saving || saved) return;
+    if (savingRef.current || saved) return;
     const form = new FormData(event.currentTarget);
+    savingRef.current = true;
     setSaving(true);
     setError("");
+    const version = session.current;
     try {
-      const res = await fetch(
+      const response = await fetch(
         `/api/${encodeURIComponent(clinic.slug)}/unanswered`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Assistant-Language": language,
+          },
           body: JSON.stringify({
             question,
+            language_code: language,
             visitor_name: form.get("visitor_name"),
             visitor_phone: form.get("visitor_phone"),
             consent: form.get("consent") === "on",
@@ -130,60 +205,75 @@ export function Assistant({
           }),
         },
       );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error);
+      const data = await response.json();
+      if (version !== session.current) return;
+      if (!response.ok) {
+        setError(data.error ?? t.errors.saveFailed);
         return;
       }
       setSaved(true);
       setUrl(data.whatsappUrl);
     } catch {
-      setError(
-        "Sorunuz kaydedilemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.",
-      );
+      if (version === session.current) setError(t.errors.saveNetwork);
     } finally {
-      setSaving(false);
+      savingRef.current = false;
+      if (version === session.current) setSaving(false);
     }
   }
   return (
     <main className="shell">
       {preview && (
         <p className="preview" role="status">
-          Mock klinik modu · Örnek bilgiler kullanılıyor. Soru kayıtları
-          geçicidir; sunucu yeniden başladığında silinir. Kliniğe otomatik
-          bildirim gönderilmez.
+          {t.mockNotice}
         </p>
       )}
       <header>
-        <a className="brand" href={`/${clinic.slug}`}>
-          <span className="paw">✦</span>
+        <a className="brand" href={`/${clinic.slug}?lang=${language}`}>
+          <span className="paw" aria-hidden="true">
+            ✦
+          </span>
           <span>
-            {clinic.name}
-            <small>SESLİ ASİSTAN</small>
+            {clinicName}
+            <small>{t.assistantTitle}</small>
           </span>
         </a>
-        <span className="demo">Demo klinik</span>
+        <div className="header-controls">
+          <span className="demo">{t.demoClinic}</span>
+          <div
+            className="language-switch"
+            role="group"
+            aria-label={t.languageLabel}
+          >
+            {clinicLanguages.supported.map((code) => (
+              <button
+                key={code}
+                type="button"
+                lang={code}
+                aria-pressed={language === code}
+                aria-label={getLocale(code).label}
+                disabled={saving}
+                onClick={() => changeLanguage(code)}
+              >
+                {getLocale(code).shortLabel}
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
       <section className="hero">
-        <span className="eyebrow">DOSTLARIMIZ İÇİN BURADAYIZ</span>
+        <span className="eyebrow">{t.eyebrow}</span>
         <h1>
-          Merhaba 👋
+          {t.greeting}
           <br />
-          Size nasıl yardımcı
-          <br />
-          olabilirim?
+          {t.heroTitle}
         </h1>
-        <p>
-          Kliniğimiz hakkında merak ettiklerinizi sorun.
-          <br />
-          Siz konuşun, asistanımız cevaplasın.
-        </p>
+        <p className="multiline">{t.heroDescription}</p>
         <button
-          className={`mic ${state === "Dinliyor..." ? "listening" : ""}`}
+          className={`mic ${state === "listening" ? "listening" : ""}`}
           aria-label={
-            state === "Dinliyor..." ? "Dinlemeyi durdur" : "Mikrofonla soru sor"
+            state === "listening" ? t.stopListening : t.microphoneLabel
           }
-          disabled={saving || state === "Sorunuz anlaşılıyor..."}
+          disabled={saving || state === "processing"}
           onClick={listen}
         >
           <svg
@@ -200,86 +290,82 @@ export function Assistant({
           </svg>
         </button>
         <p className="status" role="status">
-          {state}
+          {t.statuses[state]}
         </p>
+        <small className="mic-hint">{t.tapToSpeak}</small>
         <form
           className="question-input"
-          onSubmit={(e) => {
-            e.preventDefault();
+          onSubmit={(event) => {
+            event.preventDefault();
             void ask(text);
           }}
         >
           <label className="sr-only" htmlFor="question">
-            Sorunuzu yazarak sorun
+            {t.textQuestionLabel}
           </label>
           <input
             id="question"
+            lang={language}
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Sorunuzu yazarak da sorabilirsiniz"
+            onChange={(event) => setText(event.target.value)}
+            placeholder={t.textPlaceholder}
             minLength={3}
             maxLength={1000}
             required
           />
           <button
-            disabled={saving || state === "Sorunuz anlaşılıyor..."}
-            aria-label="Soruyu gönder"
+            disabled={saving || state === "processing"}
+            aria-label={t.sendQuestion}
           >
             ↗
           </button>
         </form>
       </section>
       <section className="examples">
-        <h2>Bir soruyla başlayın</h2>
+        <h2>{t.examplesTitle}</h2>
         <div>
-          {examples.map((q) => (
+          {t.examples.map((example) => (
             <button
-              key={q}
-              disabled={saving || state === "Sorunuz anlaşılıyor..."}
+              key={example}
+              disabled={saving || state === "processing"}
               onClick={() => {
-                setText(q);
-                void ask(q);
+                setText(example);
+                void ask(example);
               }}
             >
-              {q}
-              <span>↗</span>
+              {example}
+              <span aria-hidden="true">↗</span>
             </button>
           ))}
         </div>
       </section>
       {question && (
         <section className="conversation">
-          <small>SİZİN SORUNUZ</small>
+          <small>{t.yourQuestion}</small>
           <p>{question}</p>
           {answer && (
             <>
-              <small>ASİSTANINIZ</small>
+              <small>{t.yourAssistant}</small>
               <p className="answer">{answer}</p>
               <div className="audio">
-                <button onClick={() => speak(answer)}>
-                  ▷ Cevabı tekrar dinle
-                </button>
+                <button onClick={() => speak(answer)}>▷ {t.listenAgain}</button>
                 <button
                   onClick={() => {
                     tts.current?.stop();
-                    setState("Cevap hazır");
+                    setState("answered");
                   }}
                 >
-                  Sesi durdur
+                  {t.stopAudio}
                 </button>
               </div>
             </>
           )}
           {unanswered && !saved && (
-            <form className="contact" onSubmit={submit}>
-              <h2>Size ulaşabilmemiz için</h2>
-              <p>
-                {preview
-                  ? "Akışı denemek için örnek ad ve telefon bilgileri kullanabilirsiniz."
-                  : "Adınızı ve telefon numaranızı bırakın."}
-              </p>
+            <form key={language} className="contact" onSubmit={submit}>
+              <h2>{t.contactTitle}</h2>
+              <p>{preview ? t.mockContactDescription : t.contactDescription}</p>
               <label>
-                Ad Soyad
+                {t.visitorName}
                 <input
                   name="visitor_name"
                   autoComplete="name"
@@ -290,7 +376,7 @@ export function Assistant({
                 />
               </label>
               <label>
-                Telefon
+                {t.visitorPhone}
                 <input
                   name="visitor_phone"
                   type="tel"
@@ -315,28 +401,16 @@ export function Assistant({
                   required
                   disabled={saving}
                 />
-                <span>
-                  {preview
-                    ? "Adım, telefon numaram ve sorumun bu demo için geçici olarak tutulmasını onaylıyorum. WhatsApp butonunu kullanırsam bu bilgiler demo kliniğinin WhatsApp görüşmesine aktarılacaktır."
-                    : "Adım, telefon numaram ve sorumun, soruma dönüş yapılması amacıyla klinikle paylaşılmasını onaylıyorum. WhatsApp butonunu kullanırsam bu bilgiler WhatsApp üzerinden de paylaşılacaktır."}
-                </span>
+                <span>{preview ? t.mockConsent : t.consent}</span>
               </label>
               <button className="primary" disabled={saving}>
-                {saving
-                  ? "Kaydediliyor..."
-                  : preview
-                    ? "Demo soruyu kaydet"
-                    : "Sorumu kliniğe ilet"}
+                {saving ? t.saving : preview ? t.saveMock : t.saveQuestion}
               </button>
             </form>
           )}
           {saved && (
             <div className="success" role="status">
-              <strong>
-                {preview
-                  ? "✓ Demo soru kaydı oluşturuldu."
-                  : "✓ Sorunuz kliniğe iletildi."}
-              </strong>
+              <strong>{preview ? t.savedMock : t.savedQuestion}</strong>
               {url && (
                 <>
                   <a
@@ -345,12 +419,9 @@ export function Assistant({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    WhatsApp ile Kliniğe İlet
+                    {t.whatsappButton}
                   </a>
-                  <small>
-                    Hazır mesaj WhatsApp’ta açılır. Göndermek için WhatsApp
-                    üzerinden onaylayın.
-                  </small>
+                  <small>{t.whatsappHelp}</small>
                 </>
               )}
             </div>
@@ -363,10 +434,7 @@ export function Assistant({
         </p>
       )}
       <footer>
-        <p>
-          Temsili demo bilgileri kullanılır. Tıbbi değerlendirme için veteriner
-          hekiminize başvurun.
-        </p>
+        <p>{t.footer}</p>
         <span>MK DIGITAL SYSTEMS</span>
       </footer>
     </main>

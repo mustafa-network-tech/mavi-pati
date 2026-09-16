@@ -1,8 +1,8 @@
 insert into public.clinics(slug,name,description,whatsapp,phone,address)
 values('mavi-pati','Mavi Pati Veteriner Kliniği','Tamamen temsili demo klinik. Fiyatlar ve hizmet bilgileri satış demosu içindir.','905456597551',null,'Demo adres — gerçek işletme değildir')
 on conflict(slug) do update set whatsapp=excluded.whatsapp;
-insert into public.assistant_knowledge(clinic_id,category,title,canonical_question,answer_text,keywords,alternative_questions)
-select c.id,v.category,v.question,v.question,v.answer,string_to_array(lower(v.question),' '),array[]::text[] from public.clinics c cross join (values
+insert into public.assistant_knowledge(clinic_id,language_code,category,title,canonical_question,answer_text,keywords,alternative_questions)
+select c.id,'tr',v.category,v.question,v.question,v.answer,string_to_array(lower(v.question),' '),array[]::text[] from public.clinics c cross join (values
 ('Kedi Aşıları','Kedi karma aşısı ne kadar?','Kedi karma aşısı için temsili demo ücretimiz 1.200 TL’dir. Gerçek fiyat değildir.'),
 ('Kedi Aşıları','Kedi kuduz aşısı ne kadar?','Kedi kuduz aşısı için temsili demo ücretimiz 900 TL’dir. Gerçek fiyat değildir.'),
 ('Kedi Aşıları','Kedi lösemi aşısı ne kadar?','Kedi lösemi aşısı için temsili demo ücretimiz 1.400 TL’dir. Gerçek fiyat değildir.'),
@@ -43,5 +43,5 @@ select c.id,v.category,v.question,v.question,v.answer,string_to_array(lower(v.qu
 ('Genel Hizmetler','Kedi ve köpek muayene ediyor musunuz?','Demo kliniğimizde kedi ve köpek muayenesi hizmeti sunulur.'),
 ('Genel Hizmetler','Tırnak kesimi yapıyor musunuz?','Demo kliniğimizde kedi ve köpekler için tırnak kesimi hizmeti sunulur.'),
 ('Genel Hizmetler','Hayvan pansiyonu hizmetiniz var mı?','Demo kliniğimizde hayvan pansiyonu hizmeti bulunmamaktadır.')
-) as v(category,question,answer) where c.slug='mavi-pati' on conflict(clinic_id,canonical_question) do nothing;
+) as v(category,question,answer) where c.slug='mavi-pati' on conflict(clinic_id,language_code,canonical_question) do nothing;
 update public.assistant_knowledge set alternative_questions=array['Kedi karma aşı fiyatı nedir?','Kedi karma aşısı kaç TL?','Kedimin karma aşısını yaptırmak istiyorum.'],keywords=array['kedi','karma','aşısı','fiyat'] where clinic_id=(select id from public.clinics where slug='mavi-pati') and canonical_question='Kedi karma aşısı ne kadar?';

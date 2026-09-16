@@ -1,4 +1,72 @@
 @import "tailwindcss";
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.language-switch {
+  display: flex;
+  gap: 3px;
+  background: #e7eee2;
+  border: 1px solid #ccd7c9;
+  border-radius: 30px;
+  padding: 3px;
+}
+.language-switch button {
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: #36594a;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 40px;
+  min-width: 40px;
+}
+.language-switch button[aria-pressed="true"] {
+  background: #2b6553;
+  color: white;
+}
+.multiline {
+  white-space: pre-line;
+}
+.mic-hint {
+  color: #61756c;
+  font-size: 11px;
+}
+.brand {
+  min-width: 0;
+}
+.brand > span:last-child {
+  overflow-wrap: anywhere;
+}
+.brand .paw {
+  flex-shrink: 0;
+}
+.conversation p,
+.examples button {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 450px) {
+  header {
+    align-items: flex-start;
+  }
+  .header-controls {
+    gap: 5px;
+    max-width: 112px;
+    flex-shrink: 0;
+  }
+  .hero h1 {
+    max-width: 340px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .question-input input {
+    font-size: 12px;
+  }
+}
 .preview {
   background: #e7eee2;
   border: 1px solid #c9d5c6;

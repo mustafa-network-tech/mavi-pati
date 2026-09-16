@@ -16,10 +16,14 @@ export async function createUnansweredQuestion(
     return mockQuestionStore().save({
       id: randomUUID(),
       clinic_id: clinic.id,
+      language_code: values.language_code,
       visitor_name: values.visitor_name,
       visitor_phone: values.visitor_phone,
       question_text: values.question,
-      normalized_question: normalizeQuestion(values.question),
+      normalized_question: normalizeQuestion(
+        values.question,
+        values.language_code,
+      ),
       status: "pending",
       created_at: new Date().toISOString(),
     });
@@ -27,10 +31,14 @@ export async function createUnansweredQuestion(
     .from("unanswered_questions")
     .insert({
       clinic_id: clinic.id,
+      language_code: values.language_code,
       visitor_name: values.visitor_name,
       visitor_phone: values.visitor_phone,
       question_text: values.question,
-      normalized_question: normalizeQuestion(values.question),
+      normalized_question: normalizeQuestion(
+        values.question,
+        values.language_code,
+      ),
       status: "pending",
     })
     .select()

@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { languageCodes, DEFAULT_LANGUAGE } from "@/locales";
 export const questionSchema = z.object({
   question: z.string().trim().min(3).max(1000),
+  language_code: z.enum(languageCodes).default(DEFAULT_LANGUAGE),
 });
 export const unansweredSchema = questionSchema.extend({
   visitor_name: z.string().trim().min(3).max(100),

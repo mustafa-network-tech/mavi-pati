@@ -1,34 +1,39 @@
 import type { Knowledge } from "@/types";
+import { getLocale, DEFAULT_LANGUAGE, type LanguageCode } from "@/locales";
 export const UNANSWERED_MESSAGE =
-  "Bu sorunuz için kayıtlı bilgilerimizde kesin bir cevap bulamadım.\nSorunuz kliniğimize iletilecek.\nEn kısa sürede sizinle iletişime geçilecektir.";
-export function normalizeQuestion(text: string) {
-  return text
-    .toLocaleLowerCase("tr-TR")
+  getLocale(DEFAULT_LANGUAGE).messages.unanswered;
+export function normalizeQuestion(
+  text: string,
+  language: LanguageCode = DEFAULT_LANGUAGE,
+) {
+  let normalized = text
+    .normalize("NFC")
+    .toLocaleLowerCase(getLocale(language).speechLocale)
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+  for (const [source, target] of Object.entries(
+    getLocale(language).characterAliases,
+  ))
+    normalized = normalized.replaceAll(source, target);
+  return normalized;
 }
-const stop = new Set([
-  "ne",
-  "nedir",
-  "kadar",
-  "mi",
-  "mı",
-  "mu",
-  "mü",
-  "bir",
-  "için",
-  "var",
-  "musunuz",
-]);
-const tokens = (text: string) =>
-  normalizeQuestion(text)
+const tokens = (text: string, language: LanguageCode) =>
+  normalizeQuestion(text, language)
     .split(" ")
-    .filter((t) => !stop.has(t));
-export function matchQuestion(question: string, records: Knowledge[]) {
-  const normalized = normalizeQuestion(question);
-  const query = new Set(tokens(question));
+    .map((t) => getLocale(language).tokenAliases[t] ?? t)
+    .filter(
+      (t) => !(getLocale(language).stopWords as readonly string[]).includes(t),
+    );
+export function matchQuestion(
+  question: string,
+  records: Knowledge[],
+  language: LanguageCode = DEFAULT_LANGUAGE,
+) {
+  const normalized = normalizeQuestion(question, language);
+  const query = new Set(tokens(question, language));
   const ranked = records
+    .filter((record) => record.language_code === language)
     .map((record) => {
       const phrases = [
         record.canonical_question,
@@ -36,24 +41,25 @@ export function matchQuestion(question: string, records: Knowledge[]) {
       ];
       let score = Math.max(
         ...phrases.map((phrase) => {
-          if (normalizeQuestion(phrase) === normalized) return 1;
-          const words = new Set(tokens(phrase));
+          if (normalizeQuestion(phrase, language) === normalized) return 1;
+          const words = new Set(tokens(phrase, language));
           const overlap = [...query].filter((t) => words.has(t)).length;
           return (2 * overlap) / (query.size + words.size || 1);
         }),
       );
-      const keywords = record.keywords.map(normalizeQuestion);
+      const keywords = record.keywords.flatMap((keyword) =>
+        tokens(keyword, language),
+      );
       const coverage =
         keywords.filter((k) => query.has(k)).length / (keywords.length || 1);
       score = score === 1 ? 1 : score * 0.8 + coverage * 0.2;
-      for (const [a, b] of [
-        ["kedi", "köpek"],
-        ["karma", "kuduz"],
-        ["karma", "lösemi"],
-      ]) {
+      for (const group of getLocale(language).exclusiveGroups) {
+        const specificQuery = group.filter((term) => query.has(term));
+        const specificRecord = group.filter((term) => keywords.includes(term));
         if (
-          (query.has(a) && keywords.includes(b) && !keywords.includes(a)) ||
-          (query.has(b) && keywords.includes(a) && !keywords.includes(b))
+          specificQuery.length &&
+          specificRecord.length &&
+          !specificQuery.some((term) => specificRecord.includes(term))
         )
           score = 0;
       }

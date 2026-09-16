@@ -7,6 +7,7 @@ test("mock questions are stored with tenant boundaries and independent copies", 
   const question: UnansweredQuestion = {
     id: "mock-q",
     clinic_id: "mock-a",
+    language_code: "tr",
     visitor_name: "Demo Ziyaretçi",
     visitor_phone: "05000000000",
     question_text: "Demo soru metni",

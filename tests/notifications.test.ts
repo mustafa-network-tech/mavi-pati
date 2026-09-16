@@ -9,6 +9,7 @@ import type { Clinic, UnansweredQuestion, Knowledge } from "../types";
 const q: UnansweredQuestion = {
   id: "q",
   clinic_id: "a",
+  language_code: "tr",
   visitor_name: "Ayşe & Ali",
   visitor_phone: "+90 555 000 0000",
   question_text: "Boncuk için fiyat? & 🐾",
@@ -68,6 +69,7 @@ const records: Knowledge[] = [
   {
     id: "k",
     clinic_id: "a",
+    language_code: "tr",
     category: "Kedi Aşıları",
     canonical_question: "Kedi karma aşısı ne kadar?",
     answer_text: "Demo cevap",

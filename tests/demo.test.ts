@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { isLocalDemo } from "../lib/demo/mode";
-import seed from "../lib/demo/seed.json";
+import { demoClinic, demoKnowledge } from "../lib/demo/data";
 import { matchQuestion } from "../lib/matching";
 test("preview only works in development without any public database configuration", () => {
   assert.equal(isLocalDemo({ NODE_ENV: "development" }), true);
@@ -15,7 +15,10 @@ test("preview only works in development without any public database configuratio
   );
 });
 test("demo contains 40 clinic scoped questions and examples match", () => {
-  assert.equal(seed.knowledge.length, 40);
+  assert.equal(
+    demoKnowledge.filter((k) => k.language_code === "tr").length,
+    40,
+  );
   for (const question of [
     "Kedi karma aşısı ne kadar?",
     "Kedi kısırlaştırma ücreti nedir?",
@@ -24,10 +27,10 @@ test("demo contains 40 clinic scoped questions and examples match", () => {
     "Randevu almam gerekiyor mu?",
     "Acil hizmetiniz var mı?",
   ])
-    assert.ok(matchQuestion(question, seed.knowledge), question);
-  assert.ok(seed.knowledge.every((k) => k.clinic_id === seed.clinic.id));
+    assert.ok(matchQuestion(question, demoKnowledge), question);
+  assert.ok(demoKnowledge.every((k) => k.clinic_id === demoClinic.id));
   assert.equal(
-    matchQuestion("Mars üzerinde ameliyat yapıyor musunuz?", seed.knowledge),
+    matchQuestion("Mars üzerinde ameliyat yapıyor musunuz?", demoKnowledge),
     null,
   );
 });
