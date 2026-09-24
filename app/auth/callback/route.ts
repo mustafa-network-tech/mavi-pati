@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { finalizePendingRegistration } from "@/lib/auth/registration";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 function safeNext(value: string | null) {
@@ -11,10 +12,17 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createAuthServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error)
+    if (!error) {
+      const registrationError = await finalizePendingRegistration(supabase);
+      if (registrationError) {
+        const apply = new URL("/apply", url);
+        apply.searchParams.set("error", registrationError);
+        return NextResponse.redirect(apply);
+      }
       return NextResponse.redirect(
         new URL(safeNext(url.searchParams.get("next")), url),
       );
+    }
   }
   const login = new URL("/login", url);
   login.searchParams.set(

@@ -2,6 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  checkRegistrationTarget,
+  finalizePendingRegistration,
+  parseRegistration,
+  submitRegistration,
+} from "@/lib/auth/registration";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 export type AuthActionState = {
@@ -21,22 +27,6 @@ const registerSchema = credentialsSchema.extend({
   fullName: z.string().trim().min(2).max(150),
 });
 
-const applicationSchema = z.object({
-  displayName: z.string().trim().min(2).max(160),
-  slug: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .min(3)
-    .max(80)
-    .regex(
-      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-      "Ofis adresi yalnızca küçük harf, rakam ve tire içerebilir.",
-    ),
-  phone: z.string().trim().max(30).optional(),
-  email: z.string().trim().email().optional().or(z.literal("")),
-});
-
 function values(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
@@ -46,6 +36,10 @@ function siteUrl() {
   if (configured) return configured.replace(/\/$/, "");
   if (process.env.NODE_ENV === "development") return "http://localhost:3000";
   throw new Error("NEXT_PUBLIC_SITE_URL production ortamında zorunludur.");
+}
+
+function applyErrorPath(error: string) {
+  return `/apply?error=${encodeURIComponent(error)}`;
 }
 
 export async function loginAction(
@@ -61,33 +55,45 @@ export async function loginAction(
   const supabase = await createAuthServerClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "E-posta veya parola hatalı." };
-  redirect("/app");
+  const registrationError = await finalizePendingRegistration(supabase);
+  redirect(registrationError ? applyErrorPath(registrationError) : "/app");
 }
 
 export async function registerAction(
   _previous: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = registerSchema.safeParse(values(formData));
+  const input = values(formData);
+  const parsed = registerSchema.safeParse(input);
   if (!parsed.success)
     return {
       error: parsed.error.issues[0]?.message ?? "Bilgileri kontrol edin.",
     };
+  const { registration, error: registrationInputError } =
+    parseRegistration(input);
+  if (!registration) return { error: registrationInputError };
+  const targetError = await checkRegistrationTarget(registration);
+  if (targetError) return { error: targetError };
 
   const supabase = await createAuthServerClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.fullName },
-      emailRedirectTo: `${siteUrl()}/auth/callback?next=/apply`,
+      data: { full_name: parsed.data.fullName, registration },
+      emailRedirectTo: `${siteUrl()}/auth/callback?next=/app`,
     },
   });
   if (error) return { error: "Hesap oluşturulamadı. Bilgileri kontrol edin." };
-  if (data.session) redirect("/apply");
+  if (data.session) {
+    const submitError = await submitRegistration(supabase, registration);
+    redirect(submitError ? applyErrorPath(submitError) : "/app");
+  }
   return {
     success:
-      "Hesap oluşturuldu. Devam etmek için e-posta adresinizi doğrulayın.",
+      registration.accountType === "OFFICE_ADMIN"
+        ? "Hesap oluşturuldu. E-posta adresinizi doğrulayın; ofis başvurunuz ardından Platform Admin onayına gönderilir."
+        : "Hesap oluşturuldu. E-posta adresinizi doğrulayın; katılım isteğiniz ardından ofis yöneticisinin onayına gönderilir.",
   };
 }
 
@@ -95,29 +101,17 @@ export async function applyAction(
   _previous: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = applicationSchema.safeParse(values(formData));
-  if (!parsed.success)
-    return {
-      error: parsed.error.issues[0]?.message ?? "Bilgileri kontrol edin.",
-    };
+  const { registration, error: inputError } = parseRegistration(
+    values(formData),
+  );
+  if (!registration) return { error: inputError };
 
   const supabase = await createAuthServerClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (!claims?.claims?.sub) redirect("/login");
 
-  const { error } = await supabase.rpc("submit_business_application", {
-    requested_display_name: parsed.data.displayName,
-    requested_slug: parsed.data.slug,
-    requested_phone: parsed.data.phone || null,
-    requested_email: parsed.data.email || null,
-  });
-  if (error) {
-    if (error.code === "23505")
-      return {
-        error: "Bu ofis adresi kullanılıyor veya mevcut bir başvurunuz var.",
-      };
-    return { error: "Başvuru kaydedilemedi. Lütfen tekrar deneyin." };
-  }
+  const error = await submitRegistration(supabase, registration);
+  if (error) return { error };
   redirect("/app");
 }
 

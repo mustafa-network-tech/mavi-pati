@@ -13,6 +13,27 @@ export default async function BusinessLayout({
 }) {
   const { businessSlug } = await params;
   const { business, membership } = await requireBusinessAccess(businessSlug);
+  if (membership.role === "ADVISOR" && membership.status !== "ACTIVE")
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <p className="saas-kicker">{business.display_name}</p>
+          <h1>
+            {membership.status === "PENDING"
+              ? "Onay bekleniyor"
+              : "Hesabınız pasif"}
+          </h1>
+          <p>
+            {membership.status === "PENDING"
+              ? "Danışman katılım isteğiniz ofis yöneticisine iletildi. Onaylandığında çalışma alanınız açılacak."
+              : "Danışman hesabınız ofis yöneticisi tarafından pasife alındı."}
+          </p>
+          <form action={signOutAction} className="saas-form">
+            <button className="saas-secondary">Çıkış yap</button>
+          </form>
+        </section>
+      </main>
+    );
   return (
     <main className="workspace-shell">
       <aside className="workspace-sidebar">

@@ -1305,3 +1305,58 @@ footer span {
     flex-direction: column;
   }
 }
+.account-type {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+.account-type legend {
+  margin-bottom: 8px;
+  color: #344157;
+  font-size: 12px;
+  font-weight: 750;
+}
+.saas-form .account-type label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #cfd7e4;
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: #fbfcfe;
+  cursor: pointer;
+}
+.saas-form .account-type label:has(input:checked) {
+  border-color: #2256d8;
+  background: #eef3ff;
+}
+.saas-form .account-type input {
+  width: auto;
+  min-height: 0;
+  margin-top: 3px;
+}
+.account-type span {
+  display: grid;
+  gap: 3px;
+}
+.account-type small,
+.field-hint {
+  color: #6a7689;
+  font-size: 12px;
+  font-weight: 500;
+}
+.request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.request-actions .saas-primary,
+.request-actions .saas-secondary {
+  min-height: 36px;
+  padding: 0 14px;
+}
+.request-actions .form-message {
+  flex-basis: 100%;
+}

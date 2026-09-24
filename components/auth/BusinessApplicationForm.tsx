@@ -1,40 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
-import { applyAction, type AuthActionState } from "@/app/(auth)/actions";
+import { applyAction } from "@/app/(auth)/actions";
+import { RegistrationFields } from "@/components/auth/RegistrationFields";
 
-const initialState: AuthActionState = {};
-
-export function BusinessApplicationForm() {
-  const [state, action, pending] = useActionState(applyAction, initialState);
+export function BusinessApplicationForm({ error }: { error?: string }) {
+  const [state, action, pending] = useActionState(applyAction, { error });
   return (
     <form action={action} className="saas-form">
-      <label>
-        Ofis adı
-        <input name="displayName" minLength={2} maxLength={160} required />
-      </label>
-      <label>
-        Ofis adresi
-        <span className="input-prefix">
-          mkemlak.app/
-          <input
-            name="slug"
-            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-            minLength={3}
-            maxLength={80}
-            placeholder="ornek-emlak"
-            required
-          />
-        </span>
-      </label>
-      <label>
-        Telefon
-        <input name="phone" type="tel" autoComplete="tel" maxLength={30} />
-      </label>
-      <label>
-        Ofis e-postası
-        <input name="email" type="email" autoComplete="email" />
-      </label>
+      <RegistrationFields />
       {state.error && (
         <p className="form-message error-message">{state.error}</p>
       )}

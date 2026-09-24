@@ -7,17 +7,35 @@ import {
   registerAction,
   type AuthActionState,
 } from "@/app/(auth)/actions";
+import { RegistrationFields } from "@/components/auth/RegistrationFields";
 
-const initialState: AuthActionState = {};
-
-export function AuthForm({ mode }: { mode: "login" | "register" }) {
+export function AuthForm({
+  mode,
+  error,
+}: {
+  mode: "login" | "register";
+  error?: string;
+}) {
+  const initialState: AuthActionState = { error };
   const [state, action, pending] = useActionState(
     mode === "login" ? loginAction : registerAction,
     initialState,
   );
 
+  if (mode === "register" && state.success)
+    return (
+      <div className="saas-form">
+        <p className="form-message success-message">{state.success}</p>
+        <p className="form-switch">
+          E-postanızı doğruladıktan sonra{" "}
+          <Link href="/login">giriş yapın</Link>.
+        </p>
+      </div>
+    );
+
   return (
     <form action={action} className="saas-form">
+      {mode === "register" && <RegistrationFields />}
       {mode === "register" && (
         <label>
           Ad soyad
