@@ -56,6 +56,14 @@ const listingSchema = z.object({
   assignedMemberId: z
     .union([z.string().uuid(), z.literal("")])
     .transform((value) => value || null),
+  ownerName: optionalText(160),
+  ownerPhone: optionalText(40),
+  sourceUrl: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().trim().url("İlan linki geçerli bir adres olmalıdır.").max(2000).regex(/^https?:\/\//).optional(),
+  ),
+}).refine((data) => !data.ownerName === !data.ownerPhone, {
+  message: "İlan sahibi için ad ve telefonu birlikte girin.",
 });
 
 function routeError(path: string, message: string): never {
@@ -108,6 +116,27 @@ export async function createListingAction(businessSlug: string, formData: FormDa
     access.membership.role === "ADVISOR"
       ? access.membership.id
       : parsed.data.assignedMemberId;
+  let ownerLeadId: string | null = null;
+  if (parsed.data.ownerName && parsed.data.ownerPhone) {
+    const { data: owner, error: ownerError } = await access.supabase
+      .from("leads")
+      .insert({
+        business_id: access.business.id,
+        assigned_member_id: assignedMemberId,
+        name: parsed.data.ownerName,
+        phone: parsed.data.ownerPhone,
+        city: parsed.data.city,
+        district: parsed.data.district,
+        source: "MANUAL",
+        source_url: parsed.data.sourceUrl,
+        contact_role: "OWNER",
+        preferred_contact_method: "WHATSAPP",
+      })
+      .select("id")
+      .single();
+    if (ownerError || !owner) routeError(path, "İlan sahibi kaydedilemedi.");
+    ownerLeadId = owner.id;
+  }
   const { data, error } = await access.supabase
     .from("listings")
     .insert({
@@ -126,6 +155,8 @@ export async function createListingAction(businessSlug: string, formData: FormDa
       room_count: parsed.data.roomCount,
       description: parsed.data.description,
       source: "MANUAL",
+      source_url: parsed.data.sourceUrl,
+      owner_lead_id: ownerLeadId,
     })
     .select("id")
     .single();

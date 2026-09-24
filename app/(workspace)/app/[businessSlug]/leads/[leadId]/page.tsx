@@ -20,6 +20,7 @@ const statusLabels: Record<string, string> = {
   APPOINTMENT_SCHEDULED: "Randevu planlandı",
   WON: "Kazanıldı",
   LOST: "Kaybedildi",
+  REJECTED: "Reddetti",
   ARCHIVED: "Arşivle",
 };
 
@@ -32,12 +33,17 @@ const nextStatuses: Record<string, string[]> = {
   APPOINTMENT_SCHEDULED: ["QUALIFIED", "WON", "LOST", "ARCHIVED"],
   WON: ["ARCHIVED"],
   LOST: ["ARCHIVED"],
+  REJECTED: ["ARCHIVED"],
 };
 
 const activityLabels: Record<string, string> = {
   LEAD_CREATED: "Lead oluşturuldu",
   LEAD_ASSIGNED: "Danışman ataması değiştirildi",
   LEAD_STATUS_CHANGED: "Lead durumu değiştirildi",
+  APPOINTMENT_CREATED: "Randevu oluşturuldu",
+  AI_WHATSAPP_REPLY: "AI WhatsApp cevabı",
+  LEAD_DO_NOT_CONTACT: "İletişim reddedildi (do_not_contact)",
+  CONVERSATION_HANDOFF: "Görüşme danışmana devredildi",
 };
 
 export default async function LeadDetailPage({
@@ -86,11 +92,12 @@ export default async function LeadDetailPage({
         <div>
           <p className="saas-kicker">Lead detayı</p>
           <h1>{lead.name}</h1>
-          <p className="page-subtitle">{lead.phone ?? lead.email}</p>
+          <p className="page-subtitle">{lead.phone ?? lead.email}{lead.contact_role === "OWNER" ? " · İlan sahibi" : ""}</p>
         </div>
         <Link className="text-link" href={`/app/${businessSlug}/leads`}>Listeye dön</Link>
       </header>
       {query.error && <p className="form-message error">{query.error}</p>}
+      {lead.do_not_contact && <p className="form-message error-message">Bu kişi iletişim istemediğini belirtti. WhatsApp ve arama kapalı.</p>}
 
       <section className="detail-grid">
         <article className="panel-card detail-main">

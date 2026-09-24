@@ -34,7 +34,7 @@ export async function requireBusinessAccess(slug: string) {
   const session = await requireSession();
   const { data: business } = await session.supabase
     .from("businesses")
-    .select("id,slug,display_name,status,access_starts_at,access_expires_at")
+    .select("id,slug,display_name,status,timezone,access_starts_at,access_expires_at")
     .eq("slug", slug)
     .maybeSingle();
   if (!business) notFound();

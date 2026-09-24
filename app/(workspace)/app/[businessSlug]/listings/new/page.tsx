@@ -38,8 +38,11 @@ export default async function NewListingPage({
           <label>Brüt m²<input name="grossArea" type="number" min="0" step="0.01" /></label><label>Net m²<input name="netArea" type="number" min="0" step="0.01" /></label>
           {membership.role === "OFFICE_ADMIN" && <label>Danışman<select name="assignedMemberId" defaultValue=""><option value="">Atanmamış</option>{advisors?.map((advisor) => <option value={advisor.id} key={advisor.id}>{names.get(advisor.user_id) ?? "Danışman"}</option>)}</select></label>}
           <label className="full-field">Açıklama<textarea name="description" maxLength={5000} rows={6} /></label>
+          <label>İlan sahibi adı<input name="ownerName" maxLength={160} placeholder="Ad Soyad" /></label>
+          <label>İlan sahibi telefonu<input name="ownerPhone" type="tel" maxLength={40} placeholder="05XX XXX XX XX" /></label>
+          <label className="full-field">İlan linki<input name="sourceUrl" type="url" maxLength={2000} placeholder="https://www.sahibinden.com/ilan/..." /></label>
         </div>
-        <p className="form-hint">İlan yalnızca sizin sağladığınız bilgilerle oluşturulur; üçüncü taraf ilan sitelerinden veri çekilmez.</p>
+        <p className="form-hint">İlan yalnızca sizin girdiğiniz bilgilerle oluşturulur; üçüncü taraf ilan sitelerinden otomatik veri çekilmez. İlan sahibi, AI ile WhatsApp görüşmesi için kaydedilir.</p>
         <button className="saas-primary" type="submit">İlan oluştur</button>
       </form>
     </div>

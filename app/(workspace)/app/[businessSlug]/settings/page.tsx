@@ -1,5 +1,7 @@
 import { AdvisorRequestActions } from "@/components/team/AdvisorRequestActions";
 import { requireBusinessAccess } from "@/lib/auth/dal";
+import { getAiProvider } from "@/lib/ai/provider";
+import { getWhatsAppBusinessProvider, getWhatsAppConfigStatus } from "@/lib/providers/whatsapp-cloud";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ busin
   const features = Object.entries(featureLabels);
   const isOfficeAdmin = membership.role === "OFFICE_ADMIN" && membership.status === "ACTIVE";
   const advisorRequests = isOfficeAdmin ? (members ?? []).filter((member) => member.role === "ADVISOR" && member.status === "PENDING") : [];
+  const integrations = isOfficeAdmin ? await (async () => {
+    const ai = await getAiProvider();
+    const whatsapp = getWhatsAppBusinessProvider();
+    const [aiStatus, whatsappStatus] = await Promise.all([ai.checkConnection(), whatsapp ? whatsapp.checkConnection() : Promise.resolve("NOT_CONFIGURED")]);
+    return { aiStatus, aiModel: ai.model, whatsappStatus, whatsappConfig: getWhatsAppConfigStatus() };
+  })() : null;
   const teamMembers = (members ?? []).filter((member) => member.status !== "REVOKED" && !advisorRequests.includes(member));
   return (
     <div className="workspace-page">
@@ -42,6 +50,19 @@ export default async function SettingsPage({ params }: { params: Promise<{ busin
           ) : (
             <p className="form-hint">Bekleyen danışman isteği yok. Danışmanlar kayıt olurken ofis adresi olarak <strong>{business.slug}</strong> girmelidir.</p>
           )}
+        </section>
+      )}
+      {integrations && (
+        <section className="panel-card top-gap">
+          <div className="panel-heading"><div><p className="saas-kicker">Geliştirme / test</p><h2>Entegrasyon durumu</h2></div></div>
+          <dl className="detail-list">
+            <div><dt>AI (OpenAI)</dt><dd><strong className={integrations.aiStatus === "CONNECTED" ? "feature-on" : "feature-off"}>{integrations.aiStatus}</strong>{integrations.aiModel ? ` · ${integrations.aiModel}` : ""}</dd></div>
+            <div><dt>WhatsApp Business API</dt><dd><strong className={integrations.whatsappStatus === "CONNECTED" ? "feature-on" : "feature-off"}>{integrations.whatsappStatus}</strong>{integrations.whatsappConfig.configured ? ` · ${integrations.whatsappConfig.testMode ? "TEST MODE" : "CANLI"}` : ` · eksik: ${integrations.whatsappConfig.missing.join(", ")}`}</dd></div>
+            <div><dt>Test alıcısı</dt><dd>{integrations.whatsappConfig.testRecipientSet ? "Tanımlı" : "Tanımlı değil"}</dd></div>
+            <div><dt>İlk temas şablonu</dt><dd>{integrations.whatsappConfig.templateConfigured ? "Tanımlı" : "Tanımlı değil"}</dd></div>
+            <div><dt>Webhook</dt><dd>/api/webhooks/whatsapp</dd></div>
+          </dl>
+          <p className="form-hint top-gap">İlan analizi ve görüşme durumları ilgili ilan sayfasında görünür. Anahtarlar hiçbir ekranda gösterilmez.</p>
         </section>
       )}
       <section className="panel-card top-gap"><div className="panel-heading"><div><p className="saas-kicker">Ekip</p><h2>Ofis kullanıcıları</h2></div></div><div className="data-table-wrap embedded-table"><table className="data-table"><thead><tr><th>Kullanıcı</th><th>Rol</th><th>Dil</th><th>Durum</th></tr></thead><tbody>{teamMembers.map((member) => { const profile = profileMap.get(member.user_id); return <tr key={member.id}><td><strong>{profile?.full_name ?? "Kullanıcı"}</strong><small>{profile?.phone}</small></td><td>{member.role}</td><td>{profile?.locale ?? "tr"}</td><td>{member.status}</td></tr>; })}</tbody></table></div></section>

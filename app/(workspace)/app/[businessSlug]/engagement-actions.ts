@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireBusinessAccess } from "@/lib/auth/dal";
 import { getWhatsAppProvider } from "@/lib/providers/whatsapp";
+import { zonedLocalToDate } from "@/lib/time";
 
 function routeError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -119,5 +120,42 @@ export async function cancelAppointmentAction(
     cancel_reason: reason || null,
   });
   if (error) routeError(path, "Randevu iptal edilemedi.");
+  revalidatePath(path);
+}
+
+const slotSchema = z.object({
+  memberId: z.string().uuid(),
+  startsAt: z.string(),
+  durationMinutes: z.coerce.number().int().refine((value) => [30, 45, 60, 90, 120].includes(value)),
+});
+
+export async function createAppointmentSlotAction(businessSlug: string, formData: FormData) {
+  const access = await requireBusinessAccess(businessSlug);
+  const path = `/app/${businessSlug}/appointments`;
+  const parsed = slotSchema.safeParse(Object.fromEntries(formData.entries()));
+  const startsAt = parsed.success ? zonedLocalToDate(parsed.data.startsAt, access.business.timezone) : null;
+  if (!parsed.success || !startsAt || startsAt <= new Date())
+    routeError(path, "Gelecekte geçerli bir slot başlangıcı ve süre seçin.");
+  const endsAt = new Date(startsAt.getTime() + parsed.data.durationMinutes * 60 * 1000);
+  const { error } = await access.supabase.rpc("create_appointment_slot", {
+    target_member_id: parsed.data.memberId,
+    slot_starts_at: startsAt.toISOString(),
+    slot_ends_at: endsAt.toISOString(),
+  });
+  if (error)
+    routeError(
+      path,
+      error.message.includes("overlaps")
+        ? "Bu saat, kişinin başka bir slotu veya randevusuyla çakışıyor."
+        : "Slot oluşturulamadı. Yetki ve randevu modülünü kontrol edin.",
+    );
+  revalidatePath(path);
+}
+
+export async function cancelAppointmentSlotAction(businessSlug: string, slotId: string) {
+  const access = await requireBusinessAccess(businessSlug);
+  const path = `/app/${businessSlug}/appointments`;
+  const { error } = await access.supabase.rpc("cancel_appointment_slot", { target_slot_id: slotId });
+  if (error) routeError(path, "Slot iptal edilemedi.");
   revalidatePath(path);
 }

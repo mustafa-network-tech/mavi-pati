@@ -1360,3 +1360,79 @@ footer span {
 .request-actions .form-message {
   flex-basis: 100%;
 }
+.outreach-status {
+  border-radius: 999px;
+  padding: 6px 11px;
+  background: #eef2f8;
+  color: #42516a;
+  font-size: 11px;
+  font-weight: 750;
+}
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.analysis-grid div {
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+.analysis-grid dt {
+  color: #778398;
+  font-size: 11px;
+}
+.analysis-grid dd {
+  margin: 3px 0 0;
+  font-weight: 700;
+}
+.outreach-action,
+.outreach-send,
+.outreach-steps {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.outreach-send label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.outreach-send textarea {
+  width: 100%;
+  border: 1px solid #cfd7e4;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+.chat-thread {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.chat-bubble {
+  max-width: min(560px, 90%);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+.chat-bubble.inbound {
+  justify-self: start;
+  background: #f1f4f9;
+}
+.chat-bubble.outbound {
+  justify-self: end;
+  background: #e5f6ea;
+}
+.chat-bubble small {
+  color: #6a7689;
+  font-size: 11px;
+}
+.chat-bubble p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+.slot-form {
+  flex-wrap: wrap;
+}
