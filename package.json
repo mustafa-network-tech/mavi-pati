@@ -1,16 +1,14 @@
 {
-  "name": "klinik-asistan",
+  "name": "mk-emlak-asistani",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:mock": "node scripts/start-mock.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --require ./scripts/windows-node-user-shim.cjs --import tsx --test tests/*.test.ts",
-    "seed:demo": "node scripts/generate-demo.mjs"
+    "test": "node --require ./scripts/windows-node-user-shim.cjs --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

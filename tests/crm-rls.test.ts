@@ -27,8 +27,6 @@ test("CRM RLS isolates tenants, advisor assignments and controlled lead transiti
         select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
       $$;
     `);
-    await pg.exec(sql("supabase/migrations/202609160001_v1.sql"));
-    await pg.exec(sql("supabase/migrations/202609160002_languages.sql"));
     await pg.exec(
       sql("supabase/migrations/202609240001_platform_foundation.sql"),
     );

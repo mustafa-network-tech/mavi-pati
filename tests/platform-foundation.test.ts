@@ -32,8 +32,6 @@ test("platform foundation keeps tenant data isolated and enforces advisor limits
         select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
       $$;
     `);
-    await pg.exec(sql("supabase/migrations/202609160001_v1.sql"));
-    await pg.exec(sql("supabase/migrations/202609160002_languages.sql"));
     await pg.exec(
       sql("supabase/migrations/202609240001_platform_foundation.sql"),
     );

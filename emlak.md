@@ -59,12 +59,10 @@ AI destekli emlak asistanı."
 
 ---
 
-# 2. PROJENİN KÖKENİ
+# 2. TEKNİK BAŞLANGIÇ NOKTASI
 
-Proje sıfırdan oluşturulmamaktadır.
-
-Mevcut Mavi Pati veteriner sesli asistan projesi,
-MK Emlak Asistanı SaaS platformuna dönüştürülecektir.
+MK Emlak Asistanı mevcut Next.js ve Supabase altyapısı üzerinde
+multi-tenant SaaS platformu olarak geliştirilecektir.
 
 Mevcut altyapı:
 
@@ -1598,9 +1596,9 @@ Plans / Subscriptions / Usage / Billing
 
 ---
 
-# 55. ESKİ MAVİ PATİ VERİLERİ
+# 55. GEÇİŞ SONRASI VERİ POLİTİKASI
 
-Mevcut veteriner tabloları hemen silinmemelidir.
+Kullanılmayan önceki domain tabloları ayrı veri saklama kararı olmadan silinmemelidir.
 
 Yeni emlak tabloları additive migration ile oluşturulmalıdır.
 
@@ -1866,7 +1864,7 @@ Analytics
 
 Kaynak proje:
 
-Mavi Pati.
+MK Emlak Asistanı.
 
 Deployment:
 
@@ -1932,7 +1930,7 @@ Codex bu dosyayı ve mevcut repository'yi birlikte incelemelidir.
 
 1. Mevcut repo ile bu hedef mimari arasındaki farklar.
 2. Korunacak mevcut kod.
-3. Kaldırılacak veteriner domain kodu.
+3. Kaldırılacak eski domain kodu.
 4. Yeni Platform Admin mimarisi.
 5. Auth ve rol mimarisi.
 6. Business/tenant şeması.

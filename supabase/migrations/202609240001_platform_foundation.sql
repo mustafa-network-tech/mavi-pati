@@ -1,5 +1,5 @@
 -- MK Emlak Asistani platform foundation.
--- Additive only: the legacy veterinary tables remain unchanged.
+-- Core multi-tenant platform schema.
 begin;
 
 create extension if not exists pgcrypto;

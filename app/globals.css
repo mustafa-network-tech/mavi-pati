@@ -367,7 +367,7 @@ footer span {
   }
 }
 
-/* MK Emlak SaaS surface. Legacy Mavi Pati selectors above remain isolated. */
+/* MK Emlak SaaS surface. */
 .saas-landing {
   min-height: 100vh;
   padding: 28px clamp(22px, 5vw, 80px) 64px;
