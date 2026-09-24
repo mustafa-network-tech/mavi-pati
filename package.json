@@ -9,10 +9,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "node --require ./scripts/windows-node-user-shim.cjs --import tsx --test tests/*.test.ts",
     "seed:demo": "node scripts/generate-demo.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "latest",
     "next": "latest",
     "react": "latest",

@@ -1,4 +1,32 @@
-# Veteriner Sesli Asistan V1
+# MK Emlak Asistanı dönüşümü
+
+Bu repository, çalışan Mavi Pati veteriner asistanından MK Emlak Asistanı
+multi-tenant SaaS ürününe additive olarak dönüştürülmektedir. Ana ürün ve
+güvenlik kuralları `emlak.md` dosyasındadır.
+
+Yerel dönüşüm temeli eklenmiştir: Next.js 16/Supabase SSR Auth istemcileri,
+`proxy.ts` ile session yenileme, kayıt/giriş/ofis başvurusu, Platform Admin,
+tenant çalışma alanı, lead/ilan CRM'i, WhatsApp taslakları, provider-bağımsız
+arama kayıtları, görüşme geçmişi ve randevu yönetimi. Yeni migration'lar:
+
+- `202609240001_platform_foundation.sql`: kullanıcı, tenant, rol, hak ve audit,
+- `202609240002_crm_core.sql`: lead, ilan, eşleşme, not ve aktiviteler,
+- `202609240003_engagement_core.sql`: görüşme, mesaj, arama ve randevular.
+- `202609240004_platform_controls.sql`: ofis yaşam döngüsü, özellikler ve kotalar.
+
+Bu migration'lar production'a otomatik uygulanmaz. Uygulamadan önce staging
+üzerinde RLS, Auth ve rollback provası zorunludur.
+
+Yeni route'lar: `/`, `/login`, `/register`, `/apply`, `/app`, `/platform` ve
+tenant altında `dashboard`, `leads`, `listings`, `calls`, `whatsapp`,
+`appointments`, `conversations`, `settings`.
+Eski Mavi Pati demo route'u `/mavi-pati` altında korunmuştur.
+
+Auth e-posta callback'leri için `NEXT_PUBLIC_SITE_URL` tanımlanmalıdır. Her env
+satırı yalnızca bir kez `NAME=value` biçiminde yazılmalıdır. Platform Admin
+bootstrap ve production migration bilinçli olarak otomatikleştirilmemiştir.
+
+## Legacy: Veteriner Sesli Asistan V1
 
 MK Digital Systems için Mavi Pati demo kliniği. Next.js App Router, TypeScript, Tailwind ve Supabase. Yönetim, giriş, randevu sistemi veya ücretli LLM API içermez.
 
@@ -52,7 +80,7 @@ Eşleştirme dile özgü normalizasyon, stop words, canonical/alternative phrase
 
 `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`.
 
-20 otomatik test: Türkçe regresyon, 80 canonical soru, dil izolasyonu, Rusça alternatifler, fiyat tutarlılığı, STT/TTS locale ve fallback, arayüzün iki dilde render edilmesi, cevapsız sorunun dil kaydı, bildirim hedefi ve migration/RLS. Migration testi yalnızca geçici PGlite PostgreSQL veritabanında çalışır; 40 eski Türkçe kayıt ve önceki interaction/cevapsız soru örnekleri korunur, Rusça seed tekrarlandığında mükerrer kayıt oluşmaz. Gerçek Supabase'e bağlanmaz.
+24 otomatik test: Türkçe regresyon, 80 canonical soru, dil izolasyonu, Rusça alternatifler, fiyat tutarlılığı, STT/TTS locale ve fallback, arayüzün iki dilde render edilmesi, cevapsız sorunun dil kaydı, bildirim hedefi, multi-tenant platform/CRM/engagement RLS ve provider davranışları. Migration testi yalnızca geçici PGlite PostgreSQL veritabanında çalışır; gerçek Supabase'e bağlanmaz.
 
 Çalışan mock sunucusunda uçtan uca HTTP kontrolü: `node scripts/smoke-local.mjs http://localhost:3001`. Bu kontrol örnek bir Rusça mock soru kaydı oluşturur ve WhatsApp URL'sini doğrular; mesaj göndermez. Fiziksel mikrofon, cihazdaki Rusça voice ve 360/390/430px görsel kontrolleri gerçek tarayıcı/cihaz üzerinde ayrıca denenmelidir.
 
