@@ -1,44 +1,41 @@
-import { BusinessSettingsForm } from "@/components/platform/BusinessSettingsForm";
+import { BusinessSettingsForm, type PlatformEntitlement } from "@/components/platform/BusinessSettingsForm";
 import { requirePlatformAdmin } from "@/lib/auth/dal";
+import { businessStatusLabels, loadClinicOverview } from "@/lib/platform/overview";
 import { database } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function BusinessesPage() {
-  await requirePlatformAdmin();
-  const admin = database(true);
-  const [{ data: businesses, error }, { data: entitlements }] = await Promise.all([
-    admin
-      .from("businesses")
-      .select("id,display_name,slug,status,access_starts_at,access_expires_at,created_at")
-      .order("created_at", { ascending: false }),
-    admin.from("business_entitlements").select("business_id,max_advisors,crm_enabled,appointments_enabled,whatsapp_enabled,ai_analysis_enabled,ai_voice_enabled,imports_enabled,reports_enabled,monthly_ai_call_minutes,monthly_ai_analysis_limit,monthly_lead_limit"),
+  const session = await requirePlatformAdmin();
+  const [clinics, { data: entitlements, error }] = await Promise.all([
+    loadClinicOverview(session.userId),
+    database(true)
+      .from("business_entitlements")
+      .select("business_id,max_veterinarians,max_staff,clinic_enabled,appointments_enabled,ai_assistant_enabled,ai_voice_enabled,reports_enabled,owner_portal_enabled,monthly_ai_request_limit"),
   ]);
   if (error) throw error;
-  const rights = new Map((entitlements ?? []).map((item) => [item.business_id, item]));
+  const rights = new Map((entitlements ?? []).map((item) => [item.business_id as string, item as PlatformEntitlement]));
 
   return (
     <div className="workspace-page">
-      <header className="workspace-header"><div><p className="saas-kicker">Platform</p><h1>Emlak Ofisleri</h1></div></header>
+      <header className="workspace-header"><div><p className="saas-kicker">Platform</p><h1>Veteriner Klinikleri</h1><p className="page-subtitle">Erişim süresi, kullanıcı limitleri, modüller ve AI kotası.</p></div></header>
       <div className="data-table-wrap">
         <table className="data-table">
-          <thead><tr><th>Ofis</th><th>Durum</th><th>Danışman limiti</th><th>AI Voice</th><th>WhatsApp</th><th>Bitiş</th><th>Yönet</th></tr></thead>
+          <thead><tr><th>Klinik</th><th>Durum</th><th>Hekim</th><th>Personel</th><th>MK Pati AI</th><th>Sahip portalı</th><th>Bitiş</th><th>Yönet</th></tr></thead>
           <tbody>
-            {(businesses ?? []).map((business) => {
-              const entitlement = rights.get(business.id);
-              return (
-                <tr key={business.id}>
-                  <td><strong>{business.display_name}</strong><small>/{business.slug}</small></td>
-                  <td><span className={`status-pill status-${business.status.toLowerCase()}`}>{business.status}</span></td>
-                  <td>{entitlement?.max_advisors ?? 0}</td>
-                  <td>{entitlement?.ai_voice_enabled ? "Açık" : "Kapalı"}</td>
-                  <td>{entitlement?.whatsapp_enabled ? "Açık" : "Kapalı"}</td>
-                  <td>{business.access_expires_at ? new Intl.DateTimeFormat("tr-TR").format(new Date(business.access_expires_at)) : "—"}</td>
-                  <td><details className="platform-settings"><summary>Ayarlar</summary><BusinessSettingsForm businessId={business.id} status={business.status} expiresAt={business.access_expires_at} entitlement={entitlement} /></details></td>
-                </tr>
-              );
-            })}
-            {!businesses?.length && <tr><td colSpan={7}>Henüz ofis kaydı yok.</td></tr>}
+            {clinics.map((clinic) => (
+              <tr key={clinic.business_id}>
+                <td><strong>{clinic.display_name}</strong><small>/{clinic.slug}</small></td>
+                <td><span className={`status-pill status-${clinic.status.toLowerCase()}`}>{businessStatusLabels[clinic.status] ?? clinic.status}</span></td>
+                <td>{clinic.veterinarians} / {clinic.max_veterinarians}</td>
+                <td>{clinic.staff} / {clinic.max_staff}</td>
+                <td>{clinic.ai_assistant_enabled ? `${clinic.ai_requests_this_month} / ${clinic.ai_request_limit}` : "Kapalı"}<small>{clinic.ai_voice_enabled ? "Sesli açık" : "Sesli kapalı"}</small></td>
+                <td>{clinic.owner_portal_enabled ? `${clinic.portal_accounts} hesap` : "Kapalı"}<small>{clinic.owner_portal_enabled && clinic.pending_owner_requests ? `${clinic.pending_owner_requests} bekleyen talep` : ""}</small></td>
+                <td>{clinic.access_expires_at ? new Intl.DateTimeFormat("tr-TR").format(new Date(clinic.access_expires_at)) : "—"}</td>
+                <td><details className="platform-settings"><summary>Ayarlar</summary><BusinessSettingsForm businessId={clinic.business_id} status={clinic.status} expiresAt={clinic.access_expires_at} entitlement={rights.get(clinic.business_id)} /></details></td>
+              </tr>
+            ))}
+            {!clinics.length && <tr><td colSpan={8}>Henüz klinik kaydı yok.</td></tr>}
           </tbody>
         </table>
       </div>

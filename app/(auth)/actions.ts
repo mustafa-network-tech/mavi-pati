@@ -6,8 +6,10 @@ import {
   checkRegistrationTarget,
   finalizePendingRegistration,
   parseRegistration,
+  registrationErrorPath,
   submitRegistration,
 } from "@/lib/auth/registration";
+import { siteUrl } from "@/lib/site-url";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 
 export type AuthActionState = {
@@ -31,18 +33,11 @@ function values(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
-function siteUrl() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  if (vercelHost) return `https://${vercelHost}`;
-  if (process.env.NODE_ENV === "development") return "http://localhost:3000";
-  throw new Error("NEXT_PUBLIC_SITE_URL production ortamında zorunludur.");
+// Only same-site relative paths (e.g. back to an owner invitation after login).
+function safeNext(value: FormDataEntryValue | null) {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "/app";
 }
 
-function applyErrorPath(error: string) {
-  return `/apply?error=${encodeURIComponent(error)}`;
-}
 
 export async function loginAction(
   _previous: AuthActionState,
@@ -57,8 +52,8 @@ export async function loginAction(
   const supabase = await createAuthServerClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "E-posta veya parola hatalı." };
-  const registrationError = await finalizePendingRegistration(supabase);
-  redirect(registrationError ? applyErrorPath(registrationError) : "/app");
+  const errorPath = await finalizePendingRegistration(supabase);
+  redirect(errorPath ?? safeNext(formData.get("next")));
 }
 
 export async function registerAction(
@@ -89,13 +84,15 @@ export async function registerAction(
   if (error) return { error: "Hesap oluşturulamadı. Bilgileri kontrol edin." };
   if (data.session) {
     const submitError = await submitRegistration(supabase, registration);
-    redirect(submitError ? applyErrorPath(submitError) : "/app");
+    redirect(submitError ? registrationErrorPath(registration, submitError) : "/app");
   }
   return {
     success:
-      registration.accountType === "OFFICE_ADMIN"
-        ? "Hesap oluşturuldu. E-posta adresinizi doğrulayın; ofis başvurunuz ardından Platform Admin onayına gönderilir."
-        : "Hesap oluşturuldu. E-posta adresinizi doğrulayın; katılım isteğiniz ardından ofis yöneticisinin onayına gönderilir.",
+      registration.accountType === "PET_OWNER"
+        ? "Hesap oluşturuldu. E-posta adresinizi doğruladığınızda hesabınız kliniğin hayvan sahibi portalına bağlanır."
+        : registration.accountType === "CLINIC_ADMIN"
+        ? "Hesap oluşturuldu. E-posta adresinizi doğrulayın; klinik başvurunuz ardından Platform Admin onayına gönderilir."
+        : "Hesap oluşturuldu. E-posta adresinizi doğrulayın; katılım isteğiniz ardından klinik yöneticisinin onayına gönderilir.",
   };
 }
 

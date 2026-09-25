@@ -8,7 +8,7 @@ export default function AuthLayout({
   return (
     <main className="auth-shell">
       <Link href="/" className="saas-logo">
-        <span>MK</span> Emlak Asistanı
+        <span>MK</span> Pati
       </Link>
       {children}
     </main>

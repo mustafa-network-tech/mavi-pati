@@ -35,3 +35,24 @@ export function zonedLocalToDate(local: string, timeZone: string) {
   const date = new Date(instant);
   return Number.isNaN(date.getTime()) ? null : date;
 }
+
+// "YYYY-MM-DD" of the given instant in the clinic's timezone.
+export function localDateString(timeZone: string, instant = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(
+    instant,
+  );
+}
+
+export function addDays(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+// Absolute start/end of a local calendar day (end exclusive).
+export function zonedDayRange(date: string, timeZone: string) {
+  const start = zonedLocalToDate(`${date}T00:00`, timeZone);
+  const end = zonedLocalToDate(`${addDays(date, 1)}T00:00`, timeZone);
+  if (!start || !end) throw new Error("Invalid date");
+  return { start: start.toISOString(), end: end.toISOString() };
+}

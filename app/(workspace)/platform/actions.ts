@@ -10,14 +10,18 @@ export type PlatformActionState = {
   success?: string;
 };
 
+const expiration = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .transform((value) => new Date(`${value}T23:59:59.999Z`).toISOString());
+const seats = z.coerce.number().int().min(0).max(10_000);
+
 const approvalSchema = z.object({
   businessId: z.string().uuid(),
   status: z.enum(["TRIAL", "ACTIVE"]),
-  expiresAt: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .transform((value) => new Date(`${value}T23:59:59.999Z`).toISOString()),
-  maxAdvisors: z.coerce.number().int().min(0).max(10_000),
+  expiresAt: expiration,
+  maxVeterinarians: seats,
+  maxStaff: seats,
 });
 
 export async function approveBusinessAction(
@@ -34,24 +38,24 @@ export async function approveBusinessAction(
     actor_platform_user_id: session.userId,
     approved_status: parsed.data.status,
     expires_at: parsed.data.expiresAt,
-    advisor_limit: parsed.data.maxAdvisors,
+    veterinarian_limit: parsed.data.maxVeterinarians,
+    staff_limit: parsed.data.maxStaff,
   });
-  if (error) return { error: "Ofis onaylanamadı. Bilgileri ve yetkiyi kontrol edin." };
+  if (error) return { error: "Klinik onaylanamadı. Bilgileri ve yetkiyi kontrol edin." };
 
   revalidatePath("/platform");
   revalidatePath("/platform/businesses");
   revalidatePath("/platform/applications");
-  return { success: "Ofis onaylandı ve erişim hakları etkinleştirildi." };
+  return { success: "Klinik onaylandı ve erişim hakları etkinleştirildi." };
 }
 
 const configurationSchema = z.object({
   businessId: z.string().uuid(),
   status: z.enum(["TRIAL", "ACTIVE", "SUSPENDED", "EXPIRED", "REJECTED"]),
-  expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).transform((value) => new Date(`${value}T23:59:59.999Z`).toISOString()),
-  maxAdvisors: z.coerce.number().int().min(0).max(10_000),
-  monthlyAiCallMinutes: z.coerce.number().int().min(0),
-  monthlyAiAnalysisLimit: z.coerce.number().int().min(0),
-  monthlyLeadLimit: z.coerce.number().int().min(0),
+  expiresAt: expiration,
+  maxVeterinarians: seats,
+  maxStaff: seats,
+  monthlyAiRequestLimit: z.coerce.number().int().min(0).max(10_000_000),
   reason: z.string().trim().max(1000).optional(),
 });
 
@@ -68,23 +72,26 @@ export async function configureBusinessAction(
     actor_platform_user_id: session.userId,
     next_business_status: parsed.data.status,
     next_expires_at: parsed.data.expiresAt,
-    next_max_advisors: parsed.data.maxAdvisors,
-    enable_crm: enabled("crmEnabled"),
+    next_max_veterinarians: parsed.data.maxVeterinarians,
+    next_max_staff: parsed.data.maxStaff,
+    enable_clinic: enabled("clinicEnabled"),
     enable_appointments: enabled("appointmentsEnabled"),
-    enable_whatsapp: enabled("whatsappEnabled"),
-    enable_ai_analysis: enabled("aiAnalysisEnabled"),
+    enable_ai_assistant: enabled("aiAssistantEnabled"),
     enable_ai_voice: enabled("aiVoiceEnabled"),
-    enable_imports: enabled("importsEnabled"),
     enable_reports: enabled("reportsEnabled"),
-    next_ai_call_minutes: parsed.data.monthlyAiCallMinutes,
-    next_ai_analysis_limit: parsed.data.monthlyAiAnalysisLimit,
-    next_lead_limit: parsed.data.monthlyLeadLimit,
+    enable_owner_portal: enabled("ownerPortalEnabled"),
+    next_ai_request_limit: parsed.data.monthlyAiRequestLimit,
     status_reason: parsed.data.reason || null,
   });
-  if (error) return { error: "Ofis yapılandırılamadı. Limitleri ve tarihleri kontrol edin." };
+  if (error)
+    return {
+      error: error.message?.includes("Seat limit")
+        ? "Kullanıcı limiti mevcut hekim/personel sayısının altında olamaz."
+        : "Klinik yapılandırılamadı. Limitleri ve tarihleri kontrol edin.",
+    };
   revalidatePath("/platform");
   revalidatePath("/platform/businesses");
   revalidatePath("/platform/applications");
   revalidatePath("/platform/audit");
-  return { success: "Ofis erişimi, özellikleri ve kotaları güncellendi." };
+  return { success: "Klinik erişimi, modüller ve AI kotası güncellendi." };
 }

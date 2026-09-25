@@ -1,70 +1,34 @@
 import { z } from "zod";
 
-const text = (maximum: number) => z.string().trim().min(1).max(maximum).nullable();
-const flag = z.boolean().nullable();
-
-// Unknown facts are null; the model must never guess them.
-export const listingAnalysisSchema = z.strictObject({
-  listing_purpose: z.enum(["SALE", "RENT"]).nullable(),
-  property_type: z
-    .enum(["APARTMENT", "HOUSE", "VILLA", "OFFICE", "LAND", "COMMERCIAL", "OTHER"])
-    .nullable(),
-  city: text(100),
-  district: text(100),
-  neighborhood: text(100),
-  price: z.number().nonnegative().nullable(),
-  currency: z.string().trim().regex(/^[A-Z]{3}$/).nullable(),
-  room_count: text(30),
-  gross_m2: z.number().positive().max(1_000_000).nullable(),
-  net_m2: z.number().positive().max(1_000_000).nullable(),
-  building_age: z.number().int().min(0).max(300).nullable(),
-  floor: text(50),
-  total_floors: z.number().int().min(0).max(300).nullable(),
-  heating: text(100),
-  balcony: flag,
-  elevator: flag,
-  parking: flag,
-  furnished: flag,
-  site: flag,
-  garden: flag,
-  terrace: flag,
-  view: text(150),
-  facade: text(100),
-  highlights: z.array(z.string().trim().min(1).max(160)).max(5),
-  summary: z.string().trim().min(1).max(600),
-});
-export type ListingAnalysis = z.infer<typeof listingAnalysisSchema>;
-
-export const initialMessageSchema = z.strictObject({
-  message: z.string().trim().min(10).max(700),
-});
-
-export const replyIntents = [
-  "GENERAL",
-  "OBJECTION",
-  "APPOINTMENT",
-  "PRICE_QUESTION",
-  "COMMISSION_QUESTION",
-  "REJECTION",
-  "HUMAN_REQUEST",
+export const advisorIntentKeys = [
+  "PATIENT_HISTORY",
+  "RECENT_EXAMINATIONS",
+  "VACCINATION_SUMMARY",
+  "NOTE_CLEANUP",
+  "OWNER_INFO_DRAFT",
+  "TODAY_APPOINTMENTS",
+  "UPCOMING_VACCINATIONS",
+  "UPCOMING_FOLLOW_UPS",
+  "OPERATIONS_SUMMARY",
+  "OUT_OF_SCOPE",
 ] as const;
-export const replyActions = [
-  "REPLY",
-  "SHOW_APPOINTMENTS",
-  "CREATE_APPOINTMENT",
-  "HANDOFF",
-  "CLOSE_CONVERSATION",
-] as const;
+export type AdvisorIntent = (typeof advisorIntentKeys)[number];
 
-export const conversationReplySchema = z.strictObject({
-  reply: z.string().trim().min(1).max(1000),
-  intent: z.enum(replyIntents),
-  recommended_action: z.enum(replyActions),
-  selected_slot_id: z.string().nullable(),
-  do_not_contact: z.boolean(),
-  conversation_summary: z.string().trim().min(1).max(600),
+// Step 1: map a free-form request onto one whitelisted intent. The backend then
+// decides which data may be loaded; the model never chooses queries itself.
+export const advisorClassificationSchema = z.strictObject({
+  intent: z.enum(advisorIntentKeys),
+  patient_name: z.string().trim().min(1).max(80).nullable(),
+  note_text: z.string().trim().min(1).max(6000).nullable(),
 });
-export type ConversationReply = z.infer<typeof conversationReplySchema>;
+export type AdvisorClassification = z.infer<typeof advisorClassificationSchema>;
+
+// Step 2: the answer, grounded in the context the backend supplied.
+export const advisorAnswerSchema = z.strictObject({
+  answer: z.string().trim().min(1).max(4000),
+  insufficient_data: z.boolean(),
+});
+export type AdvisorAnswer = z.infer<typeof advisorAnswerSchema>;
 
 const unsupportedKeywords = new Set([
   "$schema",
@@ -96,3 +60,26 @@ function stripKeywords(value: unknown): unknown {
 export function structuredOutputSchema(schema: z.ZodType) {
   return stripKeywords(z.toJSONSchema(schema)) as Record<string, unknown>;
 }
+
+export const ownerIntentKeys = [
+  "PET_SUMMARY",
+  "APPOINTMENT_REQUEST",
+  "MEDICATION_REQUEST",
+  "REQUEST_STATUS",
+  "CLINIC_INFO",
+  "EMERGENCY",
+  "OUT_OF_SCOPE",
+] as const;
+export type OwnerIntent = (typeof ownerIntentKeys)[number];
+
+// Owner requests are only extracted here; the backend validates them and the owner
+// must confirm before anything reaches the clinic.
+export const ownerClassificationSchema = z.strictObject({
+  intent: z.enum(ownerIntentKeys),
+  pet_name: z.string().trim().min(1).max(80).nullable(),
+  // Validated as YYYY-MM-DD (and not in the past) by the backend, not trusted here.
+  preferred_date: z.string().trim().max(20).nullable(),
+  preferred_time: z.string().trim().min(1).max(100).nullable(),
+  medication_name: z.string().trim().min(2).max(200).nullable(),
+});
+export type OwnerClassification = z.infer<typeof ownerClassificationSchema>;

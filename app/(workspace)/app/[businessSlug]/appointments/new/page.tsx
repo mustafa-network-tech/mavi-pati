@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { requireBusinessAccess } from "@/lib/auth/dal";
-import { createAppointmentAction } from "../../engagement-actions";
+import { notFound } from "next/navigation";
+import { getEntitlements, requireBusinessAccess } from "@/lib/auth/dal";
+import { label, speciesLabels } from "@/lib/clinic/labels";
+import { loadTeam, practitioners } from "@/lib/clinic/queries";
+import { createAppointmentAction } from "../../appointment-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,20 +12,59 @@ export default async function NewAppointmentPage({
   searchParams,
 }: {
   params: Promise<{ businessSlug: string }>;
-  searchParams: Promise<{ error?: string; lead?: string }>;
+  searchParams: Promise<{ error?: string; patient?: string }>;
 }) {
   const { businessSlug } = await params;
   const query = await searchParams;
   const { business, membership, supabase } = await requireBusinessAccess(businessSlug);
-  const [{ data: leads }, { data: listings }, { data: advisors }] = await Promise.all([
-    supabase.from("leads").select("id,name").eq("business_id", business.id).in("status", ["APPROVED", "CONTACTED", "QUALIFIED", "APPOINTMENT_SCHEDULED"]).order("name"),
-    supabase.from("listings").select("id,title").eq("business_id", business.id).in("status", ["DRAFT", "ACTIVE"]).order("title"),
-    supabase.from("business_members").select("id,user_id").eq("business_id", business.id).eq("role", "ADVISOR").eq("status", "ACTIVE"),
+  const entitlement = await getEntitlements(supabase, business.id);
+  if (!entitlement?.appointments_enabled) notFound();
+  const [{ data: patients }, team] = await Promise.all([
+    supabase.from("patients").select("id,name,species,owner_id").eq("business_id", business.id).eq("status", "ACTIVE").order("name").limit(2000),
+    loadTeam(supabase, business.id),
   ]);
-  const userIds = advisors?.map((advisor) => advisor.user_id) ?? [];
-  const { data: profiles } = userIds.length ? await supabase.from("profiles").select("user_id,full_name").in("user_id", userIds) : { data: [] };
-  const names = new Map(profiles?.map((profile) => [profile.user_id, profile.full_name]));
-  const availableAdvisors = membership.role === "ADVISOR" ? advisors?.filter((advisor) => advisor.id === membership.id) : advisors;
-  const action = createAppointmentAction.bind(null, businessSlug);
-  return <div className="workspace-page narrow-page"><header className="workspace-header"><div><p className="saas-kicker">Takvim</p><h1>Yeni randevu</h1></div><Link className="text-link" href={`/app/${businessSlug}/appointments`}>Takvime dön</Link></header><form action={action} className="record-form">{query.error && <p className="form-message error">{query.error}</p>}<div className="form-grid two-columns"><label>Lead<select name="leadId" required defaultValue={query.lead ?? ""}><option value="" disabled>Lead seçin</option>{leads?.map((lead) => <option value={lead.id} key={lead.id}>{lead.name}</option>)}</select></label><label>İlan<select name="listingId" defaultValue=""><option value="">İlan seçilmedi</option>{listings?.map((listing) => <option value={listing.id} key={listing.id}>{listing.title}</option>)}</select></label><label>Sorumlu danışman<select name="advisorMemberId" required defaultValue={membership.role === "ADVISOR" ? membership.id : ""}><option value="" disabled>Danışman seçin</option>{availableAdvisors?.map((advisor) => <option value={advisor.id} key={advisor.id}>{names.get(advisor.user_id) ?? "Danışman"}</option>)}</select></label><label>Başlık<input name="title" required minLength={3} defaultValue="Portföy görüşmesi" /></label><label>Başlangıç<input name="startsAt" type="datetime-local" required /></label><label>Bitiş<input name="endsAt" type="datetime-local" required /></label><label className="full-field">Konum<input name="location" placeholder="Ofis veya buluşma adresi" /></label><label className="full-field">Notlar<textarea name="notes" maxLength={5000} rows={4} /></label></div><button className="saas-primary">Randevu oluştur</button></form></div>;
+  const ownerIds = [...new Set((patients ?? []).map((patient) => patient.owner_id))];
+  const { data: owners } = ownerIds.length
+    ? await supabase.from("owners").select("id,full_name").eq("business_id", business.id).in("id", ownerIds)
+    : { data: [] };
+  const ownerNames = new Map((owners ?? []).map((owner) => [owner.id as string, owner.full_name as string]));
+  const vets = practitioners(team);
+
+  return (
+    <div className="workspace-page narrow-page">
+      <header className="workspace-header">
+        <div><p className="saas-kicker">Takvim</p><h1>Yeni randevu</h1></div>
+        <Link className="text-link" href={`/app/${businessSlug}/appointments`}>Takvime dön</Link>
+      </header>
+      <form action={createAppointmentAction.bind(null, businessSlug)} className="record-form">
+        {query.error && <p className="form-message error">{query.error}</p>}
+        <div className="form-grid two-columns">
+          <label className="full-field">Hasta
+            <select name="patientId" required defaultValue={query.patient ?? ""}>
+              <option value="" disabled>Hasta seçin</option>
+              {patients?.map((patient) => (
+                <option key={patient.id} value={patient.id}>{patient.name} · {label(speciesLabels, patient.species)} · {ownerNames.get(patient.owner_id) ?? "Sahip"}</option>
+              ))}
+            </select>
+          </label>
+          <label>Veteriner hekim
+            <select name="veterinarianMemberId" defaultValue={vets.some((vet) => vet.id === membership.id) ? membership.id : ""}>
+              <option value="">Atanmadı</option>
+              {vets.map((vet) => <option key={vet.id} value={vet.id}>{vet.name}</option>)}
+            </select>
+          </label>
+          <label>Başlangıç<input name="startsAt" type="datetime-local" required /></label>
+          <label>Süre
+            <select name="durationMinutes" defaultValue="30">
+              {[15, 20, 30, 45, 60, 90, 120].map((minutes) => <option key={minutes} value={minutes}>{minutes} dk</option>)}
+            </select>
+          </label>
+          <label>Açıklama<input name="reason" required minLength={2} maxLength={500} placeholder="Örn. Aşı, kontrol, muayene" /></label>
+          <label className="full-field">Not<textarea name="notes" rows={3} maxLength={2000} /></label>
+        </div>
+        <p className="form-hint">Hayvan sahibi hastanın kaydından otomatik atanır. Aynı hekime çakışan randevu verilemez. Hasta listede yoksa önce <Link className="text-link" href={`/app/${businessSlug}/patients/new`}>hasta kaydı</Link> oluşturun.</p>
+        <button className="saas-primary">Randevu oluştur</button>
+      </form>
+    </div>
+  );
 }

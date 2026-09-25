@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { slugify } from "@/lib/slug";
 
-type AccountType = "OFFICE_ADMIN" | "ADVISOR";
+type AccountType = "CLINIC_ADMIN" | "CLINIC_MEMBER";
 
 export function RegistrationFields() {
-  const [accountType, setAccountType] = useState<AccountType>("OFFICE_ADMIN");
+  const [accountType, setAccountType] = useState<AccountType>("CLINIC_ADMIN");
   const [displayName, setDisplayName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -19,34 +19,34 @@ export function RegistrationFields() {
           <input
             type="radio"
             name="accountType"
-            value="OFFICE_ADMIN"
-            checked={accountType === "OFFICE_ADMIN"}
-            onChange={() => setAccountType("OFFICE_ADMIN")}
+            value="CLINIC_ADMIN"
+            checked={accountType === "CLINIC_ADMIN"}
+            onChange={() => setAccountType("CLINIC_ADMIN")}
           />
           <span>
-            <strong>Yeni emlak ofisi</strong>
-            <small>Ofis yöneticisi olarak kaydolun. Platform Admin onaylar.</small>
+            <strong>Yeni veteriner kliniği</strong>
+            <small>Klinik yöneticisi olarak kaydolun. Platform Admin onaylar.</small>
           </span>
         </label>
         <label>
           <input
             type="radio"
             name="accountType"
-            value="ADVISOR"
-            checked={accountType === "ADVISOR"}
-            onChange={() => setAccountType("ADVISOR")}
+            value="CLINIC_MEMBER"
+            checked={accountType === "CLINIC_MEMBER"}
+            onChange={() => setAccountType("CLINIC_MEMBER")}
           />
           <span>
-            <strong>Mevcut ofise danışman</strong>
-            <small>Ofisinize katılın. Ofis yöneticiniz onaylar.</small>
+            <strong>Mevcut kliniğe katıl</strong>
+            <small>Veteriner hekim veya personel olarak. Klinik yöneticiniz onaylar.</small>
           </span>
         </label>
       </fieldset>
 
-      {accountType === "OFFICE_ADMIN" ? (
+      {accountType === "CLINIC_ADMIN" ? (
         <>
           <label>
-            Ofis adı
+            Klinik adı
             <input
               name="displayName"
               minLength={2}
@@ -60,15 +60,15 @@ export function RegistrationFields() {
             />
           </label>
           <label>
-            Ofis adresi
+            Klinik adresi
             <span className="input-prefix">
-              mkemlak.app/
+              mkpati.app/
               <input
                 name="slug"
                 pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                 minLength={3}
                 maxLength={80}
-                placeholder="ornek-emlak"
+                placeholder="ornek-veteriner"
                 value={slug}
                 onChange={(event) => {
                   setSlug(event.target.value.toLowerCase());
@@ -79,32 +79,39 @@ export function RegistrationFields() {
             </span>
           </label>
           <label>
-            Ofis telefonu
+            Klinik telefonu
             <input name="phone" type="tel" autoComplete="tel" maxLength={30} />
           </label>
           <label>
-            Ofis e-postası
-            <input name="officeEmail" type="email" />
+            Klinik e-postası
+            <input name="clinicEmail" type="email" />
           </label>
         </>
       ) : (
-        <label>
-          Ofis adresi
-          <span className="input-prefix">
-            mkemlak.app/
-            <input
-              name="officeSlug"
-              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              minLength={3}
-              maxLength={80}
-              placeholder="ornek-emlak"
-              required
-            />
-          </span>
-          <small className="field-hint">
-            Ofis adresini ofis yöneticinizden alın.
-          </small>
-        </label>
+        <>
+          <label>
+            Klinikteki rolünüz
+            <select name="memberRole" defaultValue="VETERINARIAN" required>
+              <option value="VETERINARIAN">Veteriner Hekim</option>
+              <option value="CLINIC_STAFF">Klinik Personeli</option>
+            </select>
+          </label>
+          <label>
+            Klinik adresi
+            <span className="input-prefix">
+              mkpati.app/
+              <input
+                name="clinicSlug"
+                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                minLength={3}
+                maxLength={80}
+                placeholder="ornek-veteriner"
+                required
+              />
+            </span>
+            <small className="field-hint">Klinik adresini klinik yöneticinizden alın.</small>
+          </label>
+        </>
       )}
     </>
   );

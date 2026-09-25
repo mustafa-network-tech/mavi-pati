@@ -12,7 +12,7 @@ async function loadApplicants(businessIds: string[]) {
     .from("business_members")
     .select("business_id,user_id")
     .in("business_id", businessIds)
-    .eq("role", "OFFICE_ADMIN");
+    .eq("role", "CLINIC_ADMIN");
   const userIds = (members ?? []).map((member) => member.user_id);
   const { data: profiles } = userIds.length
     ? await admin.from("profiles").select("user_id,full_name").in("user_id", userIds)
@@ -43,7 +43,7 @@ export default async function ApplicationsPage() {
       <div className="application-list">
         {(businesses ?? []).map((business) => (
           <article className="application-card" key={business.id}>
-            <div><small>OFİS BAŞVURUSU</small><h2>{business.display_name}</h2><p>/{business.slug} · {business.email || business.phone || "İletişim bilgisi yok"}</p><p>Başvuran: {applicants.get(business.id) ?? "Bilinmiyor"}</p></div>
+            <div><small>KLİNİK BAŞVURUSU</small><h2>{business.display_name}</h2><p>/{business.slug} · {business.email || business.phone || "İletişim bilgisi yok"}</p><p>Başvuran: {applicants.get(business.id) ?? "Bilinmiyor"}</p></div>
             <BusinessApprovalForm businessId={business.id} />
           </article>
         ))}

@@ -13,6 +13,14 @@ export default async function WorkspaceEntryPage() {
     .maybeSingle();
   if (platformUser) redirect("/platform");
 
+  const { data: portalAccount } = await session.supabase
+    .from("owner_portal_accounts")
+    .select("id")
+    .eq("user_id", session.userId)
+    .eq("status", "ACTIVE")
+    .maybeSingle();
+  if (portalAccount) redirect("/portal");
+
   const { data: memberships } = await session.supabase
     .from("business_members")
     .select("business_id,status,created_at")

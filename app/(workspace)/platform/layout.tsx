@@ -22,7 +22,7 @@ export default async function PlatformLayout({
         </div>
         <nav>
           <Link href="/platform">Dashboard</Link>
-          <Link href="/platform/businesses">Emlak Ofisleri</Link>
+          <Link href="/platform/businesses">Klinikler</Link>
           <Link href="/platform/applications">Başvurular</Link>
           <Link href="/platform/audit">Audit Log</Link>
         </nav>

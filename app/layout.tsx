@@ -1,7 +1,7 @@
 import "./globals.css";
 export const metadata = {
-  title: "MK Emlak Asistanı",
-  description: "Lead, iletişim, randevu ve CRM için AI destekli emlak asistanı",
+  title: "MK Pati — Veteriner Klinik Yönetim Sistemi",
+  description: "Veteriner klinikleri için hasta, muayene, aşı, randevu yönetimi ve MK Pati AI Klinik Danışmanı",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

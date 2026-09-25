@@ -1,6 +1,6 @@
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-// "Şişli Emlak & Yatırım" -> "sisli-emlak-yatirim"
+// "Şişli Pati Veteriner Kliniği" -> "sisli-pati-veteriner-klinigi"
 export function slugify(value: string) {
   return value
     .toLocaleLowerCase("tr")

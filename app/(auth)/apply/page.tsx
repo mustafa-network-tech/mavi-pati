@@ -12,11 +12,11 @@ export default async function ApplyPage({
   const { error } = await searchParams;
   return (
     <section className="auth-card">
-      <p className="saas-kicker">Ofis başvurusu</p>
-      <h1>Ofisinizi seçin</h1>
+      <p className="saas-kicker">Klinik başvurusu</p>
+      <h1>Kliniğinizi seçin</h1>
       <p>
-        Yeni ofis başvuruları Platform Admin, danışman katılım istekleri ofis
-        yöneticisi tarafından onaylanır.
+        Yeni klinik başvuruları Platform Admin, hekim ve personel katılım
+        istekleri klinik yöneticisi tarafından onaylanır.
       </p>
       <BusinessApplicationForm error={typeof error === "string" ? error : undefined} />
     </section>

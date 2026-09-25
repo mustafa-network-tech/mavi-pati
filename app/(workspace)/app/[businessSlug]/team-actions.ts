@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireBusinessAccess } from "@/lib/auth/dal";
+import { isClinicAdmin } from "@/lib/clinic/roles";
 
 export type TeamActionState = {
   error?: string;
@@ -10,10 +11,10 @@ export type TeamActionState = {
 
 const reviewSchema = z.object({
   memberId: z.string().uuid(),
-  decision: z.enum(["approve", "reject"]),
+  decision: z.enum(["approve", "reject", "suspend", "activate", "remove"]),
 });
 
-export async function reviewAdvisorRequestAction(
+export async function reviewMemberAction(
   businessSlug: string,
   _previous: TeamActionState,
   formData: FormData,
@@ -22,18 +23,21 @@ export async function reviewAdvisorRequestAction(
   if (!parsed.success) return { error: "İstek bilgisi geçersiz." };
 
   const { supabase, membership } = await requireBusinessAccess(businessSlug);
-  if (membership.role !== "OFFICE_ADMIN" || membership.status !== "ACTIVE")
-    return { error: "Bu işlem için ofis yöneticisi olmalısınız." };
+  if (!isClinicAdmin(membership)) return { error: "Bu işlem için klinik yöneticisi olmalısınız." };
 
-  const { error } = await supabase.rpc("review_advisor_request", {
-    target_member_id: parsed.data.memberId,
-    approve: parsed.data.decision === "approve",
-  });
+  const { memberId, decision } = parsed.data;
+  const { error } =
+    decision === "approve" || decision === "reject"
+      ? await supabase.rpc("review_member_request", { target_member_id: memberId, approve: decision === "approve" })
+      : await supabase.rpc("update_member_status", {
+          target_member_id: memberId,
+          next_status: decision === "suspend" ? "SUSPENDED" : decision === "activate" ? "ACTIVE" : "REVOKED",
+        });
   if (error) {
-    if (error.message?.includes("Advisor limit reached"))
-      return { error: "Danışman kotası dolu. Limit artışı için Platform Admin ile görüşün." };
+    if (error.message?.includes("Seat limit reached"))
+      return { error: "Bu rol için kullanıcı kotası dolu. Limit artışı için Platform Admin ile görüşün." };
     if (error.message?.includes("Business is not operational"))
-      return { error: "Ofis aktif olmadığı için danışman onaylanamaz." };
+      return { error: "Klinik aktif olmadığı için kullanıcı onaylanamaz." };
     return { error: "İstek işlenemedi. Sayfayı yenileyip tekrar deneyin." };
   }
   revalidatePath(`/app/${businessSlug}/settings`);

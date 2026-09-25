@@ -1,40 +1,37 @@
 import "server-only";
 
-import type { ConversationReply, ListingAnalysis } from "@/lib/ai/schemas";
+import type { AdvisorChannel } from "@/lib/ai/policy";
+import type {
+  AdvisorAnswer,
+  AdvisorClassification,
+  AdvisorIntent,
+  OwnerClassification,
+} from "@/lib/ai/schemas";
 
-export type ListingAnalysisInput = {
-  title: string;
-  description: string | null;
-  propertyType: string;
-  transactionType: "SALE" | "RENT";
-  price: number | null;
-  currency: string;
-  city: string | null;
-  district: string | null;
-  neighborhood: string | null;
-  roomCount: string | null;
-  grossArea: number | null;
-  netArea: number | null;
+export type AiCompletion<T> = { data: T; totalTokens: number };
+
+export type AdvisorClassificationInput = {
+  text: string;
+  allowedIntents: { key: AdvisorIntent; description: string }[];
+  currentPatientName: string | null;
 };
 
-export type InitialMessageInput = {
-  officeName: string;
-  ownerName: string | null;
-  analysis: ListingAnalysis;
+export type OwnerClassificationInput = {
+  text: string;
+  petNames: string[];
+  today: string;
+  appointmentsEnabled: boolean;
 };
 
-export type ConversationTurn = { role: "LEAD" | "OFFICE"; content: string };
-
-export type AppointmentSlotOption = { id: string; label: string };
-
-export type ConversationReplyInput = {
-  officeName: string;
-  ownerName: string | null;
-  analysis: ListingAnalysis | null;
-  listingTitle: string;
-  history: ConversationTurn[];
-  slots: AppointmentSlotOption[];
+export type AdvisorAnswerInput = {
+  // CLINIC: staff advisor policy; OWNER: pet-owner assistant policy.
+  audience?: "CLINIC" | "OWNER";
+  channel: AdvisorChannel;
+  task: string;
+  request: string;
+  context: unknown;
   now: string;
+  clinicName: string;
 };
 
 export type AiProviderStatus = "CONNECTED" | "NOT_CONFIGURED" | "ERROR";
@@ -44,9 +41,10 @@ export interface AiProvider {
   readonly model: string | null;
   readonly configured: boolean;
   checkConnection(): Promise<AiProviderStatus>;
-  analyzeListing(input: ListingAnalysisInput): Promise<ListingAnalysis>;
-  generateInitialMessage(input: InitialMessageInput): Promise<string>;
-  generateConversationReply(input: ConversationReplyInput): Promise<ConversationReply>;
+  classifyAdvisorRequest(input: AdvisorClassificationInput): Promise<AiCompletion<AdvisorClassification>>;
+  classifyOwnerRequest(input: OwnerClassificationInput): Promise<AiCompletion<OwnerClassification>>;
+  answerAdvisor(input: AdvisorAnswerInput): Promise<AiCompletion<AdvisorAnswer>>;
+  transcribe(audio: Blob, fileName: string): Promise<string>;
 }
 
 export class AiNotConfiguredError extends Error {
@@ -62,13 +60,16 @@ class NotConfiguredAiProvider implements AiProvider {
   async checkConnection(): Promise<AiProviderStatus> {
     return "NOT_CONFIGURED";
   }
-  async analyzeListing(): Promise<ListingAnalysis> {
+  async classifyAdvisorRequest(): Promise<AiCompletion<AdvisorClassification>> {
     throw new AiNotConfiguredError();
   }
-  async generateInitialMessage(): Promise<string> {
+  async classifyOwnerRequest(): Promise<AiCompletion<OwnerClassification>> {
     throw new AiNotConfiguredError();
   }
-  async generateConversationReply(): Promise<ConversationReply> {
+  async answerAdvisor(): Promise<AiCompletion<AdvisorAnswer>> {
+    throw new AiNotConfiguredError();
+  }
+  async transcribe(): Promise<string> {
     throw new AiNotConfiguredError();
   }
 }
@@ -78,5 +79,9 @@ export async function getAiProvider(): Promise<AiProvider> {
   const model = process.env.OPENAI_MODEL?.trim();
   if (!apiKey || !model) return new NotConfiguredAiProvider();
   const { OpenAiProvider } = await import("@/lib/ai/openai");
-  return new OpenAiProvider(apiKey, model);
+  return new OpenAiProvider(
+    apiKey,
+    model,
+    process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-mini-transcribe",
+  );
 }

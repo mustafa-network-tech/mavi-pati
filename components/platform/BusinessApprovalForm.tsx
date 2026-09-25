@@ -39,13 +39,17 @@ export function BusinessApprovalForm({ businessId }: { businessId: string }) {
         />
       </label>
       <label>
-        Danışman limiti
-        <input name="maxAdvisors" type="number" min={0} max={10000} defaultValue={3} required />
+        Veteriner hekim limiti
+        <input name="maxVeterinarians" type="number" min={0} max={10000} defaultValue={3} required />
+      </label>
+      <label>
+        Personel limiti
+        <input name="maxStaff" type="number" min={0} max={10000} defaultValue={3} required />
       </label>
       {state.error && <p className="form-message error-message">{state.error}</p>}
       {state.success && <p className="form-message success-message">{state.success}</p>}
       <button className="saas-primary" disabled={pending}>
-        {pending ? "Onaylanıyor..." : "Ofisi onayla"}
+        {pending ? "Onaylanıyor..." : "Kliniği onayla"}
       </button>
     </form>
   );

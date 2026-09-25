@@ -1,71 +1,113 @@
-import { AdvisorRequestActions } from "@/components/team/AdvisorRequestActions";
-import { requireBusinessAccess } from "@/lib/auth/dal";
+import { MemberActions } from "@/components/team/MemberActions";
 import { getAiProvider } from "@/lib/ai/provider";
-import { getWhatsAppBusinessProvider, getWhatsAppConfigStatus } from "@/lib/providers/whatsapp-cloud";
+import { getEntitlements, requireBusinessAccess } from "@/lib/auth/dal";
+import { formatDate } from "@/lib/clinic/labels";
+import { loadTeam } from "@/lib/clinic/queries";
+import { isClinicAdmin, memberStatusLabels, roleLabel } from "@/lib/clinic/roles";
 
 export const dynamic = "force-dynamic";
 
-const featureLabels: Record<string, string> = {
-  crm_enabled: "CRM",
-  appointments_enabled: "Randevular",
-  whatsapp_enabled: "WhatsApp",
-  ai_analysis_enabled: "AI analiz",
-  ai_voice_enabled: "AI telefon",
-  imports_enabled: "CSV / Excel import",
-  reports_enabled: "Raporlar",
-};
+const featureLabels = [
+  ["clinic_enabled", "Klinik modülleri"],
+  ["appointments_enabled", "Randevular"],
+  ["ai_assistant_enabled", "MK Pati AI (yazılı)"],
+  ["ai_voice_enabled", "MK Pati AI sesli konuşma"],
+  ["owner_portal_enabled", "Hayvan sahibi portalı"],
+  ["reports_enabled", "Raporlar"],
+] as const;
 
 export default async function SettingsPage({ params }: { params: Promise<{ businessSlug: string }> }) {
   const { businessSlug } = await params;
   const { business, membership, supabase } = await requireBusinessAccess(businessSlug);
-  const [{ data: entitlement }, { data: members }] = await Promise.all([
-    supabase.from("business_entitlements").select("*").eq("business_id", business.id).maybeSingle(),
-    supabase.from("business_members").select("id,user_id,role,status,created_at").eq("business_id", business.id).order("created_at"),
+  const admin = isClinicAdmin(membership);
+  const [entitlement, team, usage] = await Promise.all([
+    getEntitlements(supabase, business.id),
+    loadTeam(supabase, business.id),
+    admin
+      ? supabase
+          .from("business_usage")
+          .select("metric,used_quantity,period_start")
+          .eq("business_id", business.id)
+          .order("period_start", { ascending: false })
+          .limit(6)
+      : Promise.resolve({ data: [] as { metric: string; used_quantity: number; period_start: string }[] }),
   ]);
-  const userIds = members?.map((member) => member.user_id) ?? [];
-  const { data: profiles } = userIds.length ? await supabase.from("profiles").select("user_id,full_name,phone,locale").in("user_id", userIds) : { data: [] };
-  const profileMap = new Map(profiles?.map((profile) => [profile.user_id, profile]));
-  const features = Object.entries(featureLabels);
-  const isOfficeAdmin = membership.role === "OFFICE_ADMIN" && membership.status === "ACTIVE";
-  const advisorRequests = isOfficeAdmin ? (members ?? []).filter((member) => member.role === "ADVISOR" && member.status === "PENDING") : [];
-  const integrations = isOfficeAdmin ? await (async () => {
-    const ai = await getAiProvider();
-    const whatsapp = getWhatsAppBusinessProvider();
-    const [aiStatus, whatsappStatus] = await Promise.all([ai.checkConnection(), whatsapp ? whatsapp.checkConnection() : Promise.resolve("NOT_CONFIGURED")]);
-    return { aiStatus, aiModel: ai.model, whatsappStatus, whatsappConfig: getWhatsAppConfigStatus() };
-  })() : null;
-  const teamMembers = (members ?? []).filter((member) => member.status !== "REVOKED" && !advisorRequests.includes(member));
+  const aiStatus = admin
+    ? await getAiProvider().then(async (provider) => ({ status: await provider.checkConnection(), model: provider.model }))
+    : null;
+  const latestPeriod = usage.data?.[0]?.period_start;
+  const used = (metric: string) =>
+    Number(usage.data?.find((row) => row.metric === metric && row.period_start === latestPeriod)?.used_quantity ?? 0);
+  const requests = admin ? team.filter((member) => member.status === "PENDING" && member.role !== "CLINIC_ADMIN") : [];
+  const members = team.filter((member) => member.status !== "REVOKED" && !requests.includes(member));
+  const seats = (role: string) => team.filter((member) => member.role === role && ["ACTIVE", "PENDING"].includes(member.status)).length;
+
   return (
     <div className="workspace-page">
-      <header className="workspace-header"><div><p className="saas-kicker">Ofis yapılandırması</p><h1>Ayarlar</h1><p className="page-subtitle">{business.display_name} erişim hakları ve ekip görünümü.</p></div></header>
+      <header className="workspace-header"><div><p className="saas-kicker">Klinik yapılandırması</p><h1>Ayarlar</h1><p className="page-subtitle">{business.display_name} erişim hakları ve ekip.</p></div></header>
       <section className="split-panels">
-        <article className="panel-card"><div className="panel-heading"><div><p className="saas-kicker">Plan özellikleri</p><h2>Modüller</h2></div></div><div className="feature-list">{features.map(([key, label]) => <div key={key}><span>{label}</span><strong className={entitlement?.[key] ? "feature-on" : "feature-off"}>{entitlement?.[key] ? "Açık" : "Kapalı"}</strong></div>)}</div><p className="form-hint top-gap">Özellik ve kota değişiklikleri yalnızca Platform Admin tarafından yapılır.</p></article>
-        <article className="panel-card"><div className="panel-heading"><div><p className="saas-kicker">Kotalar</p><h2>Kullanım sınırları</h2></div></div><dl className="detail-list"><div><dt>Danışman</dt><dd>{entitlement?.max_advisors ?? 0}</dd></div><div><dt>Aylık AI dakika</dt><dd>{entitlement?.monthly_ai_call_minutes ?? 0}</dd></div><div><dt>AI analiz</dt><dd>{entitlement?.monthly_ai_analysis_limit ?? 0}</dd></div><div><dt>Lead</dt><dd>{entitlement?.monthly_lead_limit ?? 0}</dd></div></dl></article>
+        <article className="panel-card">
+          <div className="panel-heading"><div><p className="saas-kicker">Plan</p><h2>Modüller</h2></div></div>
+          <div className="feature-list">
+            {featureLabels.map(([key, text]) => (
+              <div key={key}><span>{text}</span><strong className={entitlement?.[key] ? "feature-on" : "feature-off"}>{entitlement?.[key] ? "Açık" : "Kapalı"}</strong></div>
+            ))}
+          </div>
+          <p className="form-hint top-gap">Modül, kullanıcı limiti ve AI kotası değişiklikleri yalnızca Platform Admin (MK Digital Systems) tarafından yapılır.</p>
+        </article>
+        <article className="panel-card">
+          <div className="panel-heading"><div><p className="saas-kicker">Kotalar</p><h2>Kullanım sınırları</h2></div></div>
+          <dl className="detail-list">
+            <div><dt>Veteriner hekim</dt><dd>{admin ? `${seats("VETERINARIAN")} / ` : ""}{entitlement?.max_veterinarians ?? 0}</dd></div>
+            <div><dt>Klinik personeli</dt><dd>{admin ? `${seats("CLINIC_STAFF")} / ` : ""}{entitlement?.max_staff ?? 0}</dd></div>
+            <div><dt>Aylık AI isteği</dt><dd>{admin ? `${used("AI_REQUEST")} / ` : ""}{entitlement?.monthly_ai_request_limit ?? 0}</dd></div>
+            {admin && <div><dt>Bu ay sesli istek</dt><dd>{used("AI_VOICE_REQUEST")}</dd></div>}
+            <div><dt>Erişim bitişi</dt><dd>{formatDate(business.access_expires_at, business.timezone)}</dd></div>
+          </dl>
+        </article>
       </section>
-      {isOfficeAdmin && (
+
+      {admin && (
         <section className="panel-card top-gap">
-          <div className="panel-heading"><div><p className="saas-kicker">Danışman istekleri</p><h2>Onay bekleyenler</h2></div></div>
-          {advisorRequests.length ? (
-            <div className="data-table-wrap embedded-table"><table className="data-table"><thead><tr><th>Danışman</th><th>İstek tarihi</th><th>İşlem</th></tr></thead><tbody>{advisorRequests.map((member) => { const profile = profileMap.get(member.user_id); return <tr key={member.id}><td><strong>{profile?.full_name ?? "Kullanıcı"}</strong><small>{profile?.phone}</small></td><td>{new Date(member.created_at).toLocaleDateString("tr-TR")}</td><td><AdvisorRequestActions businessSlug={business.slug} memberId={member.id} /></td></tr>; })}</tbody></table></div>
+          <div className="panel-heading"><div><p className="saas-kicker">Katılım istekleri</p><h2>Onay bekleyenler</h2></div></div>
+          {requests.length ? (
+            <div className="data-table-wrap embedded-table"><table className="data-table"><thead><tr><th>Kullanıcı</th><th>Rol</th><th>İşlem</th></tr></thead><tbody>
+              {requests.map((member) => (
+                <tr key={member.id}><td><strong>{member.name}</strong></td><td>{roleLabel(member.role)}</td><td><MemberActions businessSlug={business.slug} memberId={member.id} status="PENDING" /></td></tr>
+              ))}
+            </tbody></table></div>
           ) : (
-            <p className="form-hint">Bekleyen danışman isteği yok. Danışmanlar kayıt olurken ofis adresi olarak <strong>{business.slug}</strong> girmelidir.</p>
+            <p className="form-hint">Bekleyen istek yok. Veteriner hekim ve personel kayıt olurken klinik adresi olarak <strong>{business.slug}</strong> girmelidir.</p>
           )}
         </section>
       )}
-      {integrations && (
+
+      {aiStatus && (
         <section className="panel-card top-gap">
-          <div className="panel-heading"><div><p className="saas-kicker">Geliştirme / test</p><h2>Entegrasyon durumu</h2></div></div>
+          <div className="panel-heading"><div><p className="saas-kicker">Entegrasyon</p><h2>MK Pati AI bağlantısı</h2></div></div>
           <dl className="detail-list">
-            <div><dt>AI (OpenAI)</dt><dd><strong className={integrations.aiStatus === "CONNECTED" ? "feature-on" : "feature-off"}>{integrations.aiStatus}</strong>{integrations.aiModel ? ` · ${integrations.aiModel}` : ""}</dd></div>
-            <div><dt>WhatsApp Business API</dt><dd><strong className={integrations.whatsappStatus === "CONNECTED" ? "feature-on" : "feature-off"}>{integrations.whatsappStatus}</strong>{integrations.whatsappConfig.configured ? ` · ${integrations.whatsappConfig.testMode ? "TEST MODE" : "CANLI"}` : ` · eksik: ${integrations.whatsappConfig.missing.join(", ")}`}</dd></div>
-            <div><dt>Test alıcısı</dt><dd>{integrations.whatsappConfig.testRecipientSet ? "Tanımlı" : "Tanımlı değil"}</dd></div>
-            <div><dt>İlk temas şablonu</dt><dd>{integrations.whatsappConfig.templateConfigured ? "Tanımlı" : "Tanımlı değil"}</dd></div>
-            <div><dt>Webhook</dt><dd>/api/webhooks/whatsapp</dd></div>
+            <div><dt>OpenAI</dt><dd><strong className={aiStatus.status === "CONNECTED" ? "feature-on" : "feature-off"}>{aiStatus.status}</strong>{aiStatus.model ? ` · ${aiStatus.model}` : ""}</dd></div>
+            <div><dt>Sesli konuşma</dt><dd>Uygulama içi mikrofon · konuşma sunucuda yazıya çevrilir, yanıt tarayıcıda sesli okunur</dd></div>
           </dl>
-          <p className="form-hint top-gap">İlan analizi ve görüşme durumları ilgili ilan sayfasında görünür. Anahtarlar hiçbir ekranda gösterilmez.</p>
+          <p className="form-hint top-gap">API anahtarı yalnızca sunucuda tutulur. MK Pati AI’a hayvan sahibi iletişim bilgileri gönderilmez.</p>
         </section>
       )}
-      <section className="panel-card top-gap"><div className="panel-heading"><div><p className="saas-kicker">Ekip</p><h2>Ofis kullanıcıları</h2></div></div><div className="data-table-wrap embedded-table"><table className="data-table"><thead><tr><th>Kullanıcı</th><th>Rol</th><th>Dil</th><th>Durum</th></tr></thead><tbody>{teamMembers.map((member) => { const profile = profileMap.get(member.user_id); return <tr key={member.id}><td><strong>{profile?.full_name ?? "Kullanıcı"}</strong><small>{profile?.phone}</small></td><td>{member.role}</td><td>{profile?.locale ?? "tr"}</td><td>{member.status}</td></tr>; })}</tbody></table></div></section>
+
+      <section className="panel-card top-gap">
+        <div className="panel-heading"><div><p className="saas-kicker">Ekip</p><h2>Klinik kullanıcıları</h2></div></div>
+        <div className="data-table-wrap embedded-table"><table className="data-table"><thead><tr><th>Kullanıcı</th><th>Rol</th><th>Durum</th>{admin && <th>İşlem</th>}</tr></thead><tbody>
+          {members.map((member) => (
+            <tr key={member.id}>
+              <td><strong>{member.name}</strong></td>
+              <td>{roleLabel(member.role)}</td>
+              <td>{memberStatusLabels[member.status] ?? member.status}</td>
+              {admin && (
+                <td>{member.role !== "CLINIC_ADMIN" && (member.status === "ACTIVE" || member.status === "SUSPENDED") ? <MemberActions businessSlug={business.slug} memberId={member.id} status={member.status} /> : null}</td>
+              )}
+            </tr>
+          ))}
+        </tbody></table></div>
+      </section>
     </div>
   );
 }

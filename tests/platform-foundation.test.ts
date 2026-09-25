@@ -1,191 +1,136 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { PGlite } from "@electric-sql/pglite";
-import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
-
-const sql = (path: string) =>
-  readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+import {
+  addMember,
+  applyMigrations,
+  createClinic,
+  createDatabase,
+  createUsers,
+  sessions,
+} from "./helpers/database";
 
 const users = {
-  officeAdmin: "10000000-0000-4000-8000-000000000001",
-  advisor: "10000000-0000-4000-8000-000000000002",
-  secondAdvisor: "10000000-0000-4000-8000-000000000003",
-  otherOfficeAdmin: "20000000-0000-4000-8000-000000000001",
-  applicant: "30000000-0000-4000-8000-000000000001",
-  platformAdmin: "90000000-0000-4000-8000-000000000001",
+  platformAdmin: "00000000-0000-4000-8000-000000000001",
+  clinicAdmin: "00000000-0000-4000-8000-000000000002",
+  veterinarian: "00000000-0000-4000-8000-000000000003",
+  otherClinicAdmin: "00000000-0000-4000-8000-000000000004",
+  applicant: "00000000-0000-4000-8000-000000000005",
 };
 
-test("platform foundation keeps tenant data isolated and enforces advisor limits", async () => {
-  const pg = new PGlite({ extensions: { pgcrypto } });
+test("platform admin stays separate from tenants and controls clinic access, seats and AI", async () => {
+  const pg = await createDatabase();
+  const { as, asSuperuser, asServiceRole } = sessions(pg);
   try {
-    await pg.exec(`
-      create role anon;
-      create role authenticated;
-      create role service_role bypassrls;
-      create schema auth;
-      create table auth.users (
-        id uuid primary key,
-        raw_user_meta_data jsonb not null default '{}'::jsonb
-      );
-      create function auth.uid() returns uuid language sql stable as $$
-        select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-      $$;
-    `);
-    await pg.exec(
-      sql("supabase/migrations/202609240001_platform_foundation.sql"),
-    );
-    await pg.exec(
-      sql("supabase/migrations/202609240004_platform_controls.sql"),
-    );
+    await applyMigrations(pg);
+    await createUsers(pg, users);
+    assert.equal((await pg.query("select user_id from public.profiles")).rows.length, 5);
 
-    for (const [name, id] of Object.entries(users))
-      await pg.query(
-        "insert into auth.users(id,raw_user_meta_data) values($1::uuid,jsonb_build_object('full_name',$2::text))",
-        [id, name],
-      );
+    await pg.query("insert into public.platform_users(user_id) values($1)", [users.platformAdmin]);
+    const clinicA = await createClinic(pg, "klinik-a", { veterinarians: 1 });
+    const clinicB = await createClinic(pg, "klinik-b");
+    await addMember(pg, clinicA, users.clinicAdmin, "CLINIC_ADMIN");
+    await addMember(pg, clinicA, users.veterinarian, "VETERINARIAN");
+    await addMember(pg, clinicB, users.otherClinicAdmin, "CLINIC_ADMIN");
 
-    assert.equal(
-      (await pg.query("select user_id from public.profiles")).rows.length,
-      Object.keys(users).length,
+    await assert.rejects(
+      () => addMember(pg, clinicA, users.platformAdmin, "CLINIC_ADMIN"),
+      /Platform users cannot be tenant members/,
+    );
+    await assert.rejects(
+      () => pg.query("insert into public.platform_users(user_id) values($1)", [users.clinicAdmin]),
+      /Platform users cannot be tenant members/,
+    );
+    await assert.rejects(
+      () => addMember(pg, clinicA, users.applicant, "VETERINARIAN", "PENDING"),
+      /Seat limit reached/,
     );
 
-    await pg.query("insert into public.platform_users(user_id) values($1)", [
+    await as(users.veterinarian);
+    assert.deepEqual((await pg.query("select slug from public.businesses")).rows, [{ slug: "klinik-a" }]);
+    await assert.rejects(() => pg.query("update public.businesses set status='SUSPENDED'"), /permission denied/);
+    await assert.rejects(
+      () => pg.query("update public.business_entitlements set max_veterinarians=10 where business_id=$1", [clinicA]),
+      /permission denied/,
+    );
+    await assert.rejects(
+      () => pg.query("select * from public.platform_clinic_overview($1)", [users.veterinarian]),
+      /permission denied/,
+    );
+    await assert.rejects(
+      () => pg.query("select public.approve_business($1,$2,'ACTIVE',now()+interval '1 day',1,1)", [clinicA, users.veterinarian]),
+      /permission denied/,
+    );
+
+    await as(users.clinicAdmin);
+    await pg.query("update public.businesses set display_name='Klinik A Merkez' where id=$1", [clinicA]);
+    await assert.rejects(
+      () => pg.query("select public.update_member_status(id,'SUSPENDED') from public.business_members where user_id=$1", [users.clinicAdmin]),
+      /Member not found/,
+      "clinic admins cannot be suspended through the team RPC",
+    );
+
+    await as(users.applicant);
+    const application = (
+      await pg.query<{ id: string }>("select public.submit_business_application('Pati Klinik','pati-klinik',null,null) as id")
+    ).rows[0].id;
+    assert.deepEqual(
+      (await pg.query("select role, status from public.business_members")).rows,
+      [{ role: "CLINIC_ADMIN", status: "PENDING" }],
+    );
+
+    await asServiceRole();
+    await assert.rejects(
+      () => pg.query("select public.approve_business($1,$2,'ACTIVE',now()+interval '30 days',2,1)", [application, users.clinicAdmin]),
+      /Platform admin required/,
+    );
+    await pg.query("select public.approve_business($1,$2,'TRIAL',now()+interval '30 days',2,1)", [
+      application,
       users.platformAdmin,
     ]);
-    const businessA = (
-      await pg.query<{ id: string }>(`
-        insert into public.businesses(slug,display_name,status,access_starts_at,access_expires_at)
-        values('office-a','Office A','ACTIVE',now()-interval '1 day',now()+interval '30 days')
-        returning id
-      `)
-    ).rows[0].id;
-    const businessB = (
-      await pg.query<{ id: string }>(`
-        insert into public.businesses(slug,display_name,status,access_starts_at,access_expires_at)
-        values('office-b','Office B','ACTIVE',now()-interval '1 day',now()+interval '30 days')
-        returning id
-      `)
-    ).rows[0].id;
     await pg.query(
-      "insert into public.business_entitlements(business_id,max_advisors,crm_enabled) values($1,1,true),($2,3,true)",
-      [businessA, businessB],
-    );
-    await pg.query(
-      `insert into public.business_members(business_id,user_id,role,status)
-       values($1,$2,'OFFICE_ADMIN','ACTIVE'),($1,$3,'ADVISOR','ACTIVE'),($4,$5,'OFFICE_ADMIN','ACTIVE')`,
-      [
-        businessA,
-        users.officeAdmin,
-        users.advisor,
-        businessB,
-        users.otherOfficeAdmin,
-      ],
+      `select public.configure_business_access($1,$2,'ACTIVE',now()+interval '60 days',2,3,true,true,true,true,false,true,500,null)`,
+      [clinicA, users.platformAdmin],
     );
     await assert.rejects(
       () =>
         pg.query(
-          "insert into public.business_members(business_id,user_id,role,status) values($1,$2,'OFFICE_ADMIN','ACTIVE')",
-          [businessA, users.platformAdmin],
-      ),
-      /Platform users cannot be tenant members/,
-    );
-    await assert.rejects(
-      () =>
-        pg.query("insert into public.platform_users(user_id) values($1)", [
-          users.officeAdmin,
-        ]),
-      /Platform users cannot be tenant members/,
-    );
-    await assert.rejects(
-      () =>
-        pg.query(
-          "insert into public.business_members(business_id,user_id,role,status) values($1,$2,'ADVISOR','PENDING')",
-          [businessA, users.secondAdvisor],
+          `select public.configure_business_access($1,$2,'ACTIVE',now()+interval '60 days',0,3,true,true,true,true,false,false,500,null)`,
+          [clinicA, users.platformAdmin],
         ),
-      /Advisor limit reached/,
+      /Seat limit is below current member count/,
     );
-
-    await pg.exec("set role authenticated");
-    await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [
-      users.advisor,
+    const overview = await pg.query<{
+      slug: string;
+      veterinarians: number;
+      ai_voice_enabled: boolean;
+      ai_request_limit: number;
+    }>("select slug, veterinarians, ai_voice_enabled, ai_request_limit from public.platform_clinic_overview($1) order by slug", [
+      users.platformAdmin,
     ]);
-    assert.deepEqual(
-      (await pg.query<{ slug: string }>("select slug from public.businesses"))
-        .rows,
-      [{ slug: "office-a" }],
-    );
-    assert.equal(
-      (await pg.query("select id from public.business_members")).rows.length,
-      1,
-    );
-    await assert.rejects(
-      () => pg.query("update public.businesses set status='SUSPENDED'"),
-      /permission denied/,
-    );
-    await assert.rejects(
-      () =>
-        pg.query(
-          "update public.business_entitlements set max_advisors=10 where business_id=$1",
-          [businessA],
-        ),
-      /permission denied/,
-    );
+    assert.deepEqual(overview.rows.find((row) => row.slug === "klinik-a"), {
+      slug: "klinik-a",
+      veterinarians: 1,
+      ai_voice_enabled: true,
+      ai_request_limit: 500,
+    });
 
-    await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [
-      users.officeAdmin,
-    ]);
-    assert.equal(
-      (await pg.query("select id from public.business_members")).rows.length,
-      2,
-    );
-    await pg.query(
-      "update public.businesses set display_name='Office A Updated' where id=$1",
-      [businessA],
-    );
-
-    await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [
-      users.applicant,
-    ]);
-    const application = await pg.query<{ submit_business_application: string }>(
-      "select public.submit_business_application('Applicant Office','applicant-office',null,null)",
-    );
-    assert.ok(application.rows[0].submit_business_application);
+    await asSuperuser();
     assert.deepEqual(
       (
-        await pg.query<{ slug: string }>(
-          "select slug from public.businesses order by slug",
+        await pg.query(
+          "select status, (select status from public.business_members where business_id=$1) as admin_status from public.businesses where id=$1",
+          [application],
         )
       ).rows,
-      [{ slug: "applicant-office" }],
+      [{ status: "TRIAL", admin_status: "ACTIVE" }],
     );
-
-    await pg.exec("reset role");
-    await pg.exec("set role service_role");
-    await pg.query(
-      `select public.configure_business_access(
-        $1,$2,'ACTIVE',now()+interval '60 days',2,
-        true,true,true,true,true,true,true,120,500,2000,null
-      )`,
-      [businessA, users.platformAdmin],
-    );
-    await pg.exec("reset role");
-    assert.equal(
+    assert.deepEqual(
       (
-        await pg.query<{ whatsapp_enabled: boolean }>(
-          "select whatsapp_enabled from public.business_entitlements where business_id=$1",
-          [businessA],
+        await pg.query(
+          "select action from public.platform_audit_logs order by created_at, action",
         )
-      ).rows[0].whatsapp_enabled,
-      true,
-    );
-    assert.equal(
-      (
-        await pg.query<{ count: number }>(
-          "select count(*) from public.platform_audit_logs where action='BUSINESS_ACCESS_CONFIGURED'",
-        )
-      ).rows[0].count,
-      1,
+      ).rows.map((row) => (row as { action: string }).action).sort(),
+      ["BUSINESS_ACCESS_CONFIGURED", "BUSINESS_APPROVED"],
     );
   } finally {
     await pg.close();

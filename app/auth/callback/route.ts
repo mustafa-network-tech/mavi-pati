@@ -13,12 +13,8 @@ export async function GET(request: Request) {
     const supabase = await createAuthServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const registrationError = await finalizePendingRegistration(supabase);
-      if (registrationError) {
-        const apply = new URL("/apply", url);
-        apply.searchParams.set("error", registrationError);
-        return NextResponse.redirect(apply);
-      }
+      const errorPath = await finalizePendingRegistration(supabase);
+      if (errorPath) return NextResponse.redirect(new URL(errorPath, url));
       return NextResponse.redirect(
         new URL(safeNext(url.searchParams.get("next")), url),
       );

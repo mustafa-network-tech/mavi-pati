@@ -1,143 +1,110 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { PGlite } from "@electric-sql/pglite";
-import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
-
-const sql = (path: string) =>
-  readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+import { applyMigrations, createDatabase, createUsers, sessions } from "./helpers/database";
 
 const users = {
-  officeAdmin: "10000000-0000-4000-8000-000000000001",
-  advisor: "10000000-0000-4000-8000-000000000002",
-  secondAdvisor: "10000000-0000-4000-8000-000000000003",
-  otherOfficeAdmin: "20000000-0000-4000-8000-000000000001",
+  clinicAdmin: "30000000-0000-4000-8000-000000000001",
+  veterinarian: "30000000-0000-4000-8000-000000000002",
+  staff: "30000000-0000-4000-8000-000000000003",
+  otherClinicAdmin: "30000000-0000-4000-8000-000000000004",
+  secondStaff: "30000000-0000-4000-8000-000000000005",
 };
 
-test("office applications and advisor join requests follow their approval chains", async () => {
-  const pg = new PGlite({ extensions: { pgcrypto } });
+test("clinic applications and veterinarian/staff join requests follow their approval chains", async () => {
+  const pg = await createDatabase();
+  const { as, asSuperuser } = sessions(pg);
   try {
-    await pg.exec(`
-      create role anon;
-      create role authenticated;
-      create role service_role bypassrls;
-      create schema auth;
-      create table auth.users (
-        id uuid primary key,
-        raw_user_meta_data jsonb not null default '{}'::jsonb
-      );
-      create function auth.uid() returns uuid language sql stable as $$
-        select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-      $$;
-    `);
-    await pg.exec(sql("supabase/migrations/202609240001_platform_foundation.sql"));
-    await pg.exec(sql("supabase/migrations/202609240006_self_service_registration.sql"));
-    for (const [name, id] of Object.entries(users))
-      await pg.query(
-        "insert into auth.users(id,raw_user_meta_data) values($1::uuid,jsonb_build_object('full_name',$2::text))",
-        [id, name],
-      );
+    await applyMigrations(pg);
+    await createUsers(pg, users);
 
-    const as = async (userId: string) => {
-      await pg.exec("set role authenticated");
-      await pg.query("select set_config('request.jwt.claim.sub',$1,false)", [userId]);
-    };
-    const asSuperuser = () => pg.exec("reset role");
-
-    await as(users.officeAdmin);
-    const businessId = (
-      await pg.query<{ id: string }>(
-        "select public.submit_business_application('Şişli Emlak','sisli-emlak') as id",
-      )
+    await as(users.clinicAdmin);
+    const clinicId = (
+      await pg.query<{ id: string }>("select public.submit_business_application('Şişli Veteriner','sisli-vet') as id")
     ).rows[0].id;
 
-    await as(users.advisor);
+    await as(users.veterinarian);
     await assert.rejects(
-      () => pg.query("select public.request_advisor_membership('sisli-emlak')"),
-      /Office not found/,
-      "pending offices do not accept advisors",
+      () => pg.query("select public.request_clinic_membership('sisli-vet','VETERINARIAN')"),
+      /Clinic not found/,
+      "pending clinics do not accept members",
     );
 
     await asSuperuser();
     await pg.query(
       `update public.businesses set status='ACTIVE', access_starts_at=now()-interval '1 day',
          access_expires_at=now()+interval '30 days' where id=$1`,
-      [businessId],
+      [clinicId],
     );
+    await pg.query("update public.business_members set status='ACTIVE' where business_id=$1", [clinicId]);
     await pg.query(
-      "update public.business_members set status='ACTIVE' where business_id=$1 and role='OFFICE_ADMIN'",
-      [businessId],
+      "update public.business_entitlements set max_veterinarians=1, max_staff=1 where business_id=$1",
+      [clinicId],
     );
-    await pg.query("update public.business_entitlements set max_advisors=1 where business_id=$1", [
-      businessId,
-    ]);
 
-    await as(users.advisor);
-    const advisorMemberId = (
-      await pg.query<{ id: string }>(
-        "select public.request_advisor_membership(' SISLI-EMLAK ') as id",
-      )
+    await as(users.veterinarian);
+    await assert.rejects(
+      () => pg.query("select public.request_clinic_membership('sisli-vet','CLINIC_ADMIN')"),
+      /Invalid role/,
+      "nobody can request the admin role",
+    );
+    const vetMemberId = (
+      await pg.query<{ id: string }>("select public.request_clinic_membership(' SISLI-VET ','VETERINARIAN') as id")
     ).rows[0].id;
     await assert.rejects(
-      () => pg.query("select public.request_advisor_membership('sisli-emlak')"),
+      () => pg.query("select public.request_clinic_membership('sisli-vet','CLINIC_STAFF')"),
       /Membership already exists/,
     );
     await assert.rejects(
-      () => pg.query("select public.submit_business_application('Başka Ofis','baska-ofis')"),
+      () => pg.query("select public.submit_business_application('Başka Klinik','baska-klinik')"),
       /Membership already exists/,
     );
     await assert.rejects(
-      () => pg.query("select public.review_advisor_request($1,true)", [advisorMemberId]),
-      /Office admin required/,
+      () => pg.query("select public.review_member_request($1,true)", [vetMemberId]),
+      /Clinic admin required/,
     );
 
-    await as(users.secondAdvisor);
+    await as(users.staff);
+    const staffMemberId = (
+      await pg.query<{ id: string }>("select public.request_clinic_membership('sisli-vet','CLINIC_STAFF') as id")
+    ).rows[0].id;
+    await as(users.secondStaff);
     await assert.rejects(
-      () => pg.query("select public.request_advisor_membership('sisli-emlak')"),
-      /Advisor limit reached/,
-      "a pending request holds a seat",
+      () => pg.query("select public.request_clinic_membership('sisli-vet','CLINIC_STAFF')"),
+      /Seat limit reached/,
+      "a pending request holds a seat of its role",
     );
 
-    await as(users.otherOfficeAdmin);
+    await as(users.otherClinicAdmin);
     await assert.rejects(
-      () => pg.query("select public.review_advisor_request($1,true)", [advisorMemberId]),
-      /Office admin required/,
+      () => pg.query("select public.review_member_request($1,true)", [vetMemberId]),
+      /Clinic admin required/,
     );
 
-    await as(users.officeAdmin);
-    await pg.query("select public.review_advisor_request($1,true)", [advisorMemberId]);
+    await as(users.clinicAdmin);
+    await pg.query("select public.review_member_request($1,true)", [vetMemberId]);
+    await pg.query("select public.review_member_request($1,false)", [staffMemberId]);
+    await assert.rejects(
+      () => pg.query("select public.review_member_request($1,true)", [staffMemberId]),
+      /Member request not found/,
+    );
+    await pg.query("select public.update_member_status($1,'SUSPENDED')", [vetMemberId]);
+    await pg.query("select public.update_member_status($1,'ACTIVE')", [vetMemberId]);
+
     await asSuperuser();
     assert.deepEqual(
-      (
-        await pg.query("select status, invited_by from public.business_members where id=$1", [
-          advisorMemberId,
-        ])
-      ).rows,
-      [{ status: "ACTIVE", invited_by: users.officeAdmin }],
+      (await pg.query("select role, status, invited_by from public.business_members where id=$1", [vetMemberId])).rows,
+      [{ role: "VETERINARIAN", status: "ACTIVE", invited_by: users.clinicAdmin }],
     );
 
-    await pg.query("update public.business_entitlements set max_advisors=2 where business_id=$1", [
-      businessId,
-    ]);
-    await as(users.secondAdvisor);
-    const rejectedMemberId = (
-      await pg.query<{ id: string }>("select public.request_advisor_membership('sisli-emlak') as id")
-    ).rows[0].id;
-    await as(users.officeAdmin);
-    await pg.query("select public.review_advisor_request($1,false)", [rejectedMemberId]);
+    await as(users.staff);
     await assert.rejects(
-      () => pg.query("select public.review_advisor_request($1,true)", [rejectedMemberId]),
-      /Advisor request not found/,
-    );
-    await as(users.secondAdvisor);
-    await assert.rejects(
-      () => pg.query("select public.request_advisor_membership('sisli-emlak')"),
+      () => pg.query("select public.request_clinic_membership('sisli-vet','CLINIC_STAFF')"),
       /Membership already exists/,
-      "a rejected advisor cannot resubmit",
+      "a rejected member cannot resubmit",
     );
     await assert.rejects(
-      () => pg.query("select public.request_advisor_membership('olmayan-ofis')"),
-      /Office not found/,
+      () => pg.query("select public.request_clinic_membership('olmayan-klinik','CLINIC_STAFF')"),
+      /Clinic not found/,
     );
   } finally {
     await pg.close();

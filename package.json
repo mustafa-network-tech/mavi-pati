@@ -1,5 +1,5 @@
 {
-  "name": "mk-emlak-asistani",
+  "name": "mk-pati",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --require ./scripts/windows-node-user-shim.cjs --import tsx --test tests/*.test.ts"
+    "test": "node --conditions=react-server --require ./scripts/windows-node-user-shim.cjs --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

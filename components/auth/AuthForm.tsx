@@ -12,9 +12,14 @@ import { RegistrationFields } from "@/components/auth/RegistrationFields";
 export function AuthForm({
   mode,
   error,
+  next,
+  hiddenFields,
 }: {
   mode: "login" | "register";
   error?: string;
+  next?: string;
+  // Fixed registration choice (e.g. an owner invitation) instead of the account-type picker.
+  hiddenFields?: Record<string, string>;
 }) {
   const initialState: AuthActionState = { error };
   const [state, action, pending] = useActionState(
@@ -35,7 +40,13 @@ export function AuthForm({
 
   return (
     <form action={action} className="saas-form">
-      {mode === "register" && <RegistrationFields />}
+      {next && <input type="hidden" name="next" value={next} />}
+      {mode === "register" &&
+        (hiddenFields ? (
+          Object.entries(hiddenFields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)
+        ) : (
+          <RegistrationFields />
+        ))}
       {mode === "register" && (
         <label>
           Ad soyad
@@ -78,7 +89,7 @@ export function AuthForm({
       </button>
       <p className="form-switch">
         {mode === "login" ? "Hesabınız yok mu?" : "Zaten hesabınız var mı?"}{" "}
-        <Link href={mode === "login" ? "/register" : "/login"}>
+        <Link href={mode === "login" ? "/register" : next ? `/login?next=${encodeURIComponent(next)}` : "/login"}>
           {mode === "login" ? "Kayıt olun" : "Giriş yapın"}
         </Link>
       </p>
